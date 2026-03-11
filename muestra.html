@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Kit - Zajno Agency Level</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconos Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts: Syne (Vanguardia/Agencia) e Inter (Lectura) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Syne', 'sans-serif'], // Fuente vanguardista
+                    },
+                    colors: {
+                        violeta: {
+                            light: '#8C72B5',
+                            DEFAULT: '#6B4C9A', 
+                            dark: '#4A326E',
+                            neon: '#9D6CFF',    
+                        },
+                        verde: {
+                            light: '#5B9F74',
+                            DEFAULT: '#3E7E55', 
+                            dark: '#285738',
+                            neon: '#4CFF8A',    
+                        },
+                        zbase: '#F0EFEB', // Blanco crema/hueso muy elegante
+                        zdark: '#0A0A0A', // Negro casi puro
+                    },
+                    animation: {
+                        'marquee': 'marquee 15s linear infinite',
+                        'marquee-fast': 'marquee 10s linear infinite',
+                    },
+                    keyframes: {
+                        marquee: {
+                            '0%': { transform: 'translateX(0%)' },
+                            '100%': { transform: 'translateX(-100%)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #F0EFEB;
+            color: #0A0A0A;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        ::selection {
+            background-color: #9D6CFF;
+            color: #0A0A0A;
+        }
+
+        /* 1. TEXTURA DE RUIDO (Sello Zajno) */
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.04;
+            background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+        }
+
+        /* 2. BOTÓN LÍQUIDO (Liquid Fill Hover) */
+        .btn-zajno {
+            position: relative;
+            overflow: hidden;
+            transition: color 0.4s cubic-bezier(0.86, 0, 0.07, 1);
+            z-index: 1;
+        }
+        .btn-zajno::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #6B4C9A; /* Violeta */
+            transition: transform 0.4s cubic-bezier(0.86, 0, 0.07, 1);
+            z-index: -1;
+            transform-origin: bottom;
+        }
+        .btn-zajno:hover {
+            color: #F0EFEB;
+        }
+        .btn-zajno:hover::before {
+            transform: translateY(-100%);
+        }
+
+        /* 3. IMAGEN CON REVELADO EN BLANCO Y NEGRO */
+        .img-reveal {
+            filter: grayscale(100%) contrast(1.2);
+            transition: all 0.6s cubic-bezier(0.86, 0, 0.07, 1);
+        }
+        .group:hover .img-reveal {
+            filter: grayscale(0%) contrast(1);
+            transform: scale(1.05);
+        }
+
+        /* Ocultar scrollbar para la marquesina */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 4. COMPONENTES DE FORMULARIO ESTRICTOS (NATIVO/RESPONSIVO) */
+        
+        /* Asegurar áreas de toque grandes para celular (min 44px) */
+        .touch-target {
+            min-height: 48px;
+        }
+
+        /* Radio Button Cuadrado (Estilo Brutalista) */
+        .z-radio {
+            appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid #0A0A0A;
+            border-radius: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.86, 0, 0.07, 1);
+            cursor: pointer;
+            background-color: transparent;
+            flex-shrink: 0;
+        }
+        .z-radio:checked {
+            background-color: #0A0A0A;
+            border-color: #0A0A0A;
+        }
+        .z-radio:checked::after {
+            content: '';
+            width: 0.5rem;
+            height: 0.5rem;
+            background-color: #4CFF8A;
+        }
+
+        /* Checkbox Cuadrado */
+        .z-checkbox {
+            appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid #0A0A0A;
+            border-radius: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .z-checkbox:checked {
+            background-color: #6B4C9A;
+            border-color: #6B4C9A;
+        }
+        .z-checkbox:checked::after {
+            content: '✓';
+            color: #F0EFEB;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        /* Range Slider Zajno (Barra deslizante brutalista) */
+        .z-range {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 2px;
+            background: rgba(10, 10, 10, 0.2);
+            outline: none;
+            margin: 1.5rem 0;
+        }
+        .z-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #0A0A0A;
+            cursor: pointer;
+            border-radius: 0;
+            border: 2px solid #0A0A0A;
+            transition: all 0.2s;
+        }
+        .z-range::-webkit-slider-thumb:hover, .z-range:active::-webkit-slider-thumb {
+            transform: scale(1.3) rotate(45deg);
+            background: #9D6CFF;
+            border-color: #9D6CFF;
+        }
+        .z-range::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: #0A0A0A;
+            cursor: pointer;
+            border-radius: 0;
+            border: 2px solid #0A0A0A;
+            transition: all 0.2s;
+        }
+        .z-range::-moz-range-thumb:hover, .z-range:active::-moz-range-thumb {
+            transform: scale(1.3) rotate(45deg);
+            background: #9D6CFF;
+            border-color: #9D6CFF;
+        }
+
+        /* Select Personalizado */
+        .z-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230A0A0A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.2em;
+        }
+
+        /* Input de Archivo (Upload) */
+        .z-file-upload {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .z-file-upload input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* 5. TABLA RESPONSIVA (Card Stacking en Móvil) */
+        @media (max-width: 768px) {
+            .z-table-responsive thead {
+                display: none;
+            }
+            .z-table-responsive tbody tr {
+                display: block;
+                border: 1px solid rgba(10, 10, 10, 0.2);
+                margin-bottom: 1.5rem;
+                background-color: transparent;
+            }
+            .z-table-responsive tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid rgba(10, 10, 10, 0.1);
+                padding: 1rem;
+                text-align: right;
+            }
+            .z-table-responsive tbody td:last-child {
+                border-bottom: none;
+            }
+            .z-table-responsive tbody td::before {
+                content: attr(data-label);
+                font-family: 'Inter', sans-serif;
+                font-size: 0.625rem;
+                text-transform: uppercase;
+                letter-spacing: 0.2em;
+                font-weight: 700;
+                color: rgba(10, 10, 10, 0.5);
+                margin-right: 1rem;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body class="relative min-h-screen">
+    
+    <!-- Textura Global -->
+    <div class="noise-overlay"></div>
+
+    <!-- NAVEGACIÓN ESTILO EDITORIAL -->
+    <nav class="border-b border-zdark/10 p-4 md:p-6 flex justify-between items-center mix-blend-difference text-white fixed top-0 w-full z-50">
+        <div class="font-display font-bold text-2xl tracking-tighter">NUTRI<span class="text-violeta-neon">.</span>U</div>
+        <div class="text-[10px] font-sans uppercase tracking-[0.3em] hidden md:block">Sistema de Diseño v2.0</div>
+        <button class="w-10 h-10 border border-white/30 rounded-full flex items-center justify-center hover:bg-white hover:text-black transition-colors touch-target">
+            <i class="ph ph-list text-xl"></i>
+        </button>
+    </nav>
+
+    <!-- MARQUESINA INFINITA (HEADER) -->
+    <div class="pt-28 md:pt-32 pb-6 md:pb-10 overflow-hidden border-b border-zdark">
+        <div class="flex whitespace-nowrap animate-marquee">
+            <h1 class="font-display text-[6rem] md:text-[12rem] font-extrabold tracking-tighter leading-none text-zdark px-4">
+                VIOLETA & VERDE <span class="text-transparent" style="-webkit-text-stroke: 2px #0A0A0A;">NATURALEZA</span> —
+            </h1>
+            <h1 class="font-display text-[6rem] md:text-[12rem] font-extrabold tracking-tighter leading-none text-zdark px-4">
+                VIOLETA & VERDE <span class="text-transparent" style="-webkit-text-stroke: 2px #0A0A0A;">NATURALEZA</span> —
+            </h1>
+        </div>
+    </div>
+
+    <main class="max-w-screen-2xl mx-auto p-4 md:p-12 mt-8 md:mt-12 mb-24"> <!-- Margen inferior para el FAB -->
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16">
+            
+            <!-- COLUMNA IZQUIERDA: TIPOGRAFÍA & COMPONENTES -->
+            <div class="lg:col-span-7 space-y-16 md:space-y-20">
+                
+                <!-- Tipografía -->
+                <section>
+                    <div class="flex items-center gap-4 mb-8">
+                        <span class="text-xs font-bold text-violeta">01</span>
+                        <div class="h-[1px] w-12 bg-zdark/20"></div>
+                        <h2 class="text-[10px] uppercase tracking-[0.2em] font-bold text-zdark/50">Tipografía Syne</h2>
+                    </div>
+                    
+                    <div class="space-y-8">
+                        <div>
+                            <h3 class="font-display text-4xl md:text-7xl font-bold tracking-tight">Come Inteligente.</h3>
+                            <p class="font-sans text-sm md:text-base text-zdark/60 font-light mt-4 max-w-md leading-relaxed">
+                                Abandona los bordes redondeados infantiles. Entra en una era de geometría estricta, alto contraste y legibilidad quirúrgica para tu progreso nutricional.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Botones Estilo Agencia -->
+                <section>
+                    <div class="flex items-center gap-4 mb-8">
+                        <span class="text-xs font-bold text-violeta">02</span>
+                        <div class="h-[1px] w-12 bg-zdark/20"></div>
+                        <h2 class="text-[10px] uppercase tracking-[0.2em] font-bold text-zdark/50">Interacciones</h2>
+                    </div>
+                    
+                    <div class="flex flex-col md:flex-row gap-4 md:gap-6 md:items-center">
+                        <!-- Botón Líquido - Full width en móvil -->
+                        <button class="btn-zajno border border-zdark px-8 py-4 touch-target text-sm font-bold uppercase tracking-widest text-zdark w-full md:w-auto text-center">
+                            Registrar Comida
+                        </button>
+                        
+                        <!-- Botón Fantasma con Icono -->
+                        <button class="group flex items-center justify-center gap-3 text-verde px-4 py-4 touch-target text-sm font-bold uppercase tracking-widest border-b border-transparent hover:border-verde transition-all w-full md:w-auto">
+                            Ver Progreso Mensual
+                            <i class="ph ph-arrow-up-right text-lg group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Tarjetas de Información -->
+                <section>
+                    <div class="flex items-center gap-4 mb-8">
+                        <span class="text-xs font-bold text-violeta">03</span>
+                        <div class="h-[1px] w-12 bg-zdark/20"></div>
+                        <h2 class="text-[10px] uppercase tracking-[0.2em] font-bold text-zdark/50">Estructuras / Cards</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Card Calorías (Dark Mode Inline) -->
+                        <div class="bg-zdark text-zbase p-6 md:p-8 relative overflow-hidden group">
+                            <!-- Patrón decorativo -->
+                            <i class="ph ph-fire text-[8rem] absolute -right-6 -bottom-6 text-white opacity-5 group-hover:opacity-10 transition-opacity"></i>
+                            
+                            <h4 class="text-[10px] uppercase tracking-[0.3em] font-sans text-violeta-neon mb-6">Consumo Diario</h4>
+                            <div class="font-display text-5xl md:text-6xl font-bold mb-2">1,850</div>
+                            <p class="text-xs font-light text-zbase/50 uppercase tracking-widest mb-8">Kilocalorías</p>
+                            
+                            <div class="w-full bg-zbase/20 h-px relative">
+                                <div class="absolute top-0 left-0 h-full bg-violeta-neon w-[75%]"></div>
+                            </div>
+                        </div>
+
+                        <!-- Card Foto Revelado -->
+                        <div class="border border-zdark/20 p-2 group cursor-pointer relative">
+                            <!-- Etiqueta Flotante -->
+                            <div class="absolute top-6 right-6 z-10 bg-verde text-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest mix-blend-normal">
+                                Almuerzo
+                            </div>
+                            
+                            <div class="overflow-hidden bg-zdark/5 aspect-[4/3] mb-4">
+                                <!-- Imagen de Ensalada -->
+                                <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=600&auto=format&fit=crop" alt="Ensalada" class="w-full h-full object-cover img-reveal">
+                            </div>
+                            <div class="px-2 pb-2 flex justify-between items-end">
+                                <div>
+                                    <h4 class="font-display font-bold text-lg md:text-xl text-zdark">Bowl de Quinoa</h4>
+                                    <p class="text-[10px] md:text-xs text-zdark/50 font-sans mt-1">450 kcal · Alta Proteína</p>
+                                </div>
+                                <div class="w-8 h-8 rounded-full border border-zdark flex items-center justify-center group-hover:bg-zdark group-hover:text-white transition-colors">
+                                    <i class="ph ph-plus"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- COLUMNA DERECHA: FORMULARIOS MINI & CONTROLES -->
+            <div class="lg:col-span-5 space-y-16 md:space-y-20 pt-10 lg:pt-0">
+                
+                <!-- Panel de Agua / Hidratación -->
+                <section>
+                    <div class="flex items-center gap-4 mb-8">
+                        <span class="text-xs font-bold text-verde">04</span>
+                        <div class="h-[1px] w-12 bg-zdark/20"></div>
+                        <h2 class="text-[10px] uppercase tracking-[0.2em] font-bold text-zdark/50">Visualización de Datos</h2>
+                    </div>
+
+                    <div class="border-t border-b border-zdark py-6 flex items-center justify-between group cursor-pointer">
+                        <div>
+                            <h4 class="font-display text-2xl md:text-3xl font-bold group-hover:text-verde transition-colors">Hidratación</h4>
+                            <p class="text-[10px] md:text-xs font-sans text-zdark/50 uppercase tracking-widest mt-1">4 de 8 vasos diarios</p>
+                        </div>
+                        <div class="flex gap-1 md:gap-2">
+                            <!-- Barras de agua -->
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-verde"></div>
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-verde"></div>
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-verde"></div>
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-verde"></div>
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-zdark/10"></div>
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-zdark/10"></div>
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-zdark/10"></div>
+                            <div class="w-1.5 md:w-2 h-10 md:h-12 bg-zdark/10"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Input Corto Simulado (Quick Log) -->
+                <section class="bg-white border border-zdark/10 p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(10,10,10,0.05)]">
+                    <h3 class="font-display text-xl font-bold mb-6">Registro Rápido</h3>
+                    
+                    <div class="relative mb-6">
+                        <input type="text" placeholder="Ej: Manzana verde" class="touch-target w-full bg-transparent border-b-2 border-zdark/10 text-xl font-display font-bold text-zdark placeholder:text-zdark/20 focus:outline-none focus:border-verde transition-colors">
+                        <span class="absolute right-0 bottom-4 text-[10px] font-bold text-zdark/30 uppercase tracking-widest">Alimento</span>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <input type="number" placeholder="Kcal" class="touch-target w-1/3 bg-transparent border-b border-zdark/10 text-center font-sans focus:outline-none focus:border-violeta transition-colors">
+                        <button class="btn-zajno flex-1 border border-zdark bg-transparent text-zdark text-xs font-bold uppercase tracking-widest">
+                            Añadir
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- SECCIÓN MAESTRA: FORMULARIO NATIVO/RESPONSIVO PERFECTO ZAJNO -->
+        <div class="mt-20 md:mt-32 space-y-20 md:space-y-32">
+            
+            <section class="border-t border-zdark pt-12 md:pt-16">
+                <div class="flex items-center gap-4 mb-8 md:mb-12">
+                    <span class="text-xs font-bold text-violeta">05</span>
+                    <div class="h-[1px] w-12 bg-zdark/20"></div>
+                    <h2 class="text-[10px] uppercase tracking-[0.2em] font-bold text-zdark/50">Formulario Extendido Nivel Agencia</h2>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-12 md:gap-16">
+                    <!-- Título de Formulario -->
+                    <div class="xl:col-span-1">
+                        <h3 class="font-display text-5xl md:text-7xl font-bold tracking-tighter leading-none mb-4 md:mb-6">DISEÑA<br>TU PLAN.</h3>
+                        <p class="font-sans text-sm text-zdark/60 font-light max-w-sm mb-6">
+                            Configura tu perfil metabólico. Todos los controles están diseñados para operar de manera táctil impecable en cualquier dispositivo.
+                        </p>
+                        <!-- Indicador de pasos visual -->
+                        <div class="hidden xl:flex items-center gap-2">
+                            <div class="h-1 w-12 bg-zdark"></div>
+                            <div class="h-1 w-12 bg-zdark/20"></div>
+                            <div class="h-1 w-12 bg-zdark/20"></div>
+                        </div>
+                    </div>
+
+                    <!-- Campos del Formulario (Contenedor principal interactivo) -->
+                    <div class="xl:col-span-2">
+                        <form class="space-y-8 md:space-y-12">
+                            
+                            <!-- Fila 1: Text Inputs con Floating Labels grandes -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                                <div class="relative group pt-4">
+                                    <input type="text" id="nombre" placeholder=" " class="touch-target peer w-full bg-transparent border-b border-zdark/20 pb-2 text-xl md:text-2xl font-display font-bold text-zdark focus:outline-none focus:border-violeta transition-colors rounded-none">
+                                    <label for="nombre" class="absolute left-0 top-0 text-[10px] md:text-xs font-bold text-zdark/40 uppercase tracking-widest transition-all peer-focus:-top-2 peer-focus:text-violeta peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal peer-placeholder-shown:text-zdark/30 pointer-events-none">Nombre Completo</label>
+                                </div>
+                                <div class="relative group pt-4">
+                                    <input type="email" id="email" placeholder=" " class="touch-target peer w-full bg-transparent border-b border-zdark/20 pb-2 text-xl md:text-2xl font-display font-bold text-zdark focus:outline-none focus:border-violeta transition-colors rounded-none">
+                                    <label for="email" class="absolute left-0 top-0 text-[10px] md:text-xs font-bold text-zdark/40 uppercase tracking-widest transition-all peer-focus:-top-2 peer-focus:text-violeta peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal peer-placeholder-shown:text-zdark/30 pointer-events-none">Correo Electrónico</label>
+                                </div>
+                            </div>
+
+                            <!-- Fila 2: Select Personalizado y Fecha -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+                                <div class="relative">
+                                    <label class="block mb-2 text-[10px] font-bold text-zdark/40 uppercase tracking-widest">Tipo de Dieta</label>
+                                    <select class="z-select touch-target w-full bg-transparent border-b border-zdark/20 pb-2 text-lg md:text-xl font-display font-bold text-zdark focus:outline-none focus:border-verde transition-colors rounded-none">
+                                        <option value="omnivora">Omnívora Estándar</option>
+                                        <option value="vegetariana">Vegetariana</option>
+                                        <option value="vegana">Vegana Estricta</option>
+                                        <option value="keto">Cetogénica (Keto)</option>
+                                    </select>
+                                </div>
+                                <div class="relative">
+                                    <label class="block mb-2 text-[10px] font-bold text-zdark/40 uppercase tracking-widest">Fecha de Inicio</label>
+                                    <input type="date" class="touch-target w-full bg-transparent border-b border-zdark/20 pb-2 text-lg md:text-xl font-sans text-zdark focus:outline-none focus:border-verde transition-colors rounded-none uppercase">
+                                </div>
+                            </div>
+
+                            <!-- Fila 3: Opciones de Radio Brutalistas (Apiladas en móvil, grid en PC) -->
+                            <div>
+                                <span class="block mb-4 text-[10px] font-bold text-zdark/40 uppercase tracking-widest">Objetivo Principal</span>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <label class="border border-zdark/20 p-4 md:p-6 flex items-start gap-4 cursor-pointer hover:border-zdark transition-colors bg-white/50">
+                                        <input type="radio" name="objetivo" class="z-radio mt-0.5">
+                                        <div>
+                                            <span class="block font-display font-bold text-lg md:text-xl leading-none mb-1">Déficit</span>
+                                            <span class="text-[10px] font-sans text-zdark/50 uppercase tracking-widest">Pérdida de grasa</span>
+                                        </div>
+                                    </label>
+                                    <label class="border border-zdark/20 p-4 md:p-6 flex items-start gap-4 cursor-pointer hover:border-zdark transition-colors bg-white/50">
+                                        <input type="radio" name="objetivo" class="z-radio mt-0.5" checked>
+                                        <div>
+                                            <span class="block font-display font-bold text-lg md:text-xl leading-none mb-1">Mantener</span>
+                                            <span class="text-[10px] font-sans text-zdark/50 uppercase tracking-widest">Recomposición</span>
+                                        </div>
+                                    </label>
+                                    <label class="border border-zdark/20 p-4 md:p-6 flex items-start gap-4 cursor-pointer hover:border-zdark transition-colors bg-white/50">
+                                        <input type="radio" name="objetivo" class="z-radio mt-0.5">
+                                        <div>
+                                            <span class="block font-display font-bold text-lg md:text-xl leading-none mb-1">Superávit</span>
+                                            <span class="text-[10px] font-sans text-zdark/50 uppercase tracking-widest">Masa muscular</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Fila 4: Range Slider Brutalista -->
+                            <div class="pt-4">
+                                <div class="flex justify-between items-end mb-2">
+                                    <label class="block text-[10px] font-bold text-zdark/40 uppercase tracking-widest">Nivel de Actividad Física</label>
+                                    <span class="font-display font-bold text-xl text-violeta">Activo</span>
+                                </div>
+                                <input type="range" min="1" max="5" value="4" class="z-range touch-target">
+                                <div class="flex justify-between text-[10px] text-zdark/40 font-bold uppercase tracking-widest mt-2">
+                                    <span>Sedentario</span>
+                                    <span>Atleta</span>
+                                </div>
+                            </div>
+
+                            <!-- Fila 5: File Upload Brutalista -->
+                            <div class="pt-4">
+                                <span class="block mb-4 text-[10px] font-bold text-zdark/40 uppercase tracking-widest">Estudio Corporal (Opcional)</span>
+                                <div class="z-file-upload w-full border-2 border-dashed border-zdark/20 hover:border-violeta bg-white/50 hover:bg-violeta/5 transition-all p-8 flex flex-col items-center justify-center text-center touch-target">
+                                    <input type="file" accept=".pdf,image/*">
+                                    <i class="ph ph-upload-simple text-3xl mb-2 text-zdark/50"></i>
+                                    <span class="font-display font-bold text-lg">Subir Documento</span>
+                                    <span class="text-[10px] font-sans text-zdark/40 uppercase tracking-widest mt-1">Arrastra o toca para seleccionar (PDF, JPG)</span>
+                                </div>
+                            </div>
+
+                            <!-- Fila 6: Checkbox y Botón de Envío -->
+                            <div class="flex flex-col gap-6 pt-8 border-t border-zdark/10">
+                                <label class="flex items-center gap-4 cursor-pointer group touch-target">
+                                    <input type="checkbox" class="z-checkbox" required>
+                                    <span class="text-xs md:text-sm font-medium text-zdark/60 group-hover:text-zdark transition-colors leading-tight">Juro que los datos ingresados son reales y acepto los <span class="text-violeta underline decoration-violeta/30 underline-offset-4">términos de salud</span>.</span>
+                                </label>
+                                
+                                <!-- Botón estirado en móvil, al lado derecho en PC -->
+                                <div class="flex justify-end mt-4">
+                                    <button type="submit" class="btn-zajno w-full md:w-auto border border-zdark bg-zdark text-white px-12 py-5 text-sm md:text-base font-bold uppercase tracking-widest hover:text-zdark hover:border-verde-neon hover:bg-transparent text-center">
+                                        Generar Perfil Analítico
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TABLA DE DATOS RESPONSIVA -->
+            <section class="border-t border-zdark pt-12 md:pt-16">
+                <div class="flex items-center gap-4 mb-8 md:mb-12">
+                    <span class="text-xs font-bold text-violeta">06</span>
+                    <div class="h-[1px] w-12 bg-zdark/20"></div>
+                    <h2 class="text-[10px] uppercase tracking-[0.2em] font-bold text-zdark/50">Tabla de Datos Híbrida (Card Stacking)</h2>
+                </div>
+
+                <div class="w-full">
+                    <table class="w-full z-table-responsive border-collapse">
+                        <!-- Cabecera (Solo visible en PC) -->
+                        <thead>
+                            <tr class="border-b border-zdark">
+                                <th class="text-left pb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zdark/40 w-1/5">Fecha / Hora</th>
+                                <th class="text-left pb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zdark/40 w-2/5">Descripción de Comida</th>
+                                <th class="text-left pb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zdark/40 w-1/5">Macros</th>
+                                <th class="text-right pb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zdark/40 w-1/5">Impacto (Kcal)</th>
+                            </tr>
+                        </thead>
+                        <!-- Cuerpo de la Tabla -->
+                        <tbody>
+                            <!-- Fila 1 -->
+                            <tr class="border-b border-zdark/10 hover:bg-white/50 transition-colors group">
+                                <td data-label="Fecha / Hora" class="py-4 md:py-6">
+                                    <span class="font-display font-bold text-base md:text-lg">Hoy</span>
+                                    <span class="block text-[10px] font-sans text-zdark/50 uppercase tracking-widest mt-0.5">08:30 AM</span>
+                                </td>
+                                <td data-label="Descripción" class="py-4 md:py-6">
+                                    <div class="flex items-center gap-3 md:gap-4">
+                                        <div class="w-8 h-8 md:w-10 md:h-10 border border-zdark/20 flex flex-shrink-0 items-center justify-center text-zdark/50 group-hover:bg-verde group-hover:text-white group-hover:border-verde transition-all">
+                                            <i class="ph ph-coffee"></i>
+                                        </div>
+                                        <span class="font-sans font-medium text-sm md:text-base leading-tight">Avena nocturna con proteína y arándanos</span>
+                                    </div>
+                                </td>
+                                <td data-label="Macros" class="py-4 md:py-6">
+                                    <div class="flex gap-2 justify-end md:justify-start">
+                                        <span class="px-2 py-1 border border-zdark/10 text-[10px] font-bold text-zdark uppercase">P: 35g</span>
+                                        <span class="px-2 py-1 border border-zdark/10 text-[10px] font-bold text-zdark uppercase">C: 40g</span>
+                                    </div>
+                                </td>
+                                <td data-label="Impacto (Kcal)" class="py-4 md:py-6 md:text-right">
+                                    <span class="font-display font-bold text-xl md:text-2xl text-verde">320</span>
+                                </td>
+                            </tr>
+
+                            <!-- Fila 2 -->
+                            <tr class="border-b border-zdark/10 hover:bg-white/50 transition-colors group">
+                                <td data-label="Fecha / Hora" class="py-4 md:py-6">
+                                    <span class="font-display font-bold text-base md:text-lg">Hoy</span>
+                                    <span class="block text-[10px] font-sans text-zdark/50 uppercase tracking-widest mt-0.5">01:15 PM</span>
+                                </td>
+                                <td data-label="Descripción" class="py-4 md:py-6">
+                                    <div class="flex items-center gap-3 md:gap-4">
+                                        <div class="w-8 h-8 md:w-10 md:h-10 border border-zdark/20 flex flex-shrink-0 items-center justify-center text-zdark/50 group-hover:bg-violeta group-hover:text-white group-hover:border-violeta transition-all">
+                                            <i class="ph ph-bowl-food"></i>
+                                        </div>
+                                        <span class="font-sans font-medium text-sm md:text-base leading-tight">Bowl de quinoa, atún sellado y aguacate</span>
+                                    </div>
+                                </td>
+                                <td data-label="Macros" class="py-4 md:py-6">
+                                    <div class="flex gap-2 justify-end md:justify-start">
+                                        <span class="px-2 py-1 border border-violeta text-[10px] font-bold text-violeta uppercase bg-violeta/5">P: 45g</span>
+                                        <span class="px-2 py-1 border border-zdark/10 text-[10px] font-bold text-zdark uppercase">G: 15g</span>
+                                    </div>
+                                </td>
+                                <td data-label="Impacto (Kcal)" class="py-4 md:py-6 md:text-right">
+                                    <span class="font-display font-bold text-xl md:text-2xl text-violeta">580</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- FOOTER GIGANTE -->
+    <footer class="bg-zdark text-zbase mt-10 md:mt-20 pt-16 md:pt-20 pb-24 md:pb-10 overflow-hidden relative">
+        <div class="noise-overlay" style="opacity: 0.1;"></div>
+        <div class="max-w-screen-2xl mx-auto px-4 md:px-12 flex flex-col md:flex-row justify-between items-end relative z-10">
+            <div>
+                <div class="text-[10px] text-violeta-neon uppercase tracking-[0.3em] mb-4">Mantente en forma</div>
+                <h2 class="font-display text-4xl md:text-8xl font-bold tracking-tighter leading-none mb-4">CREA TU<br>HÁBITO.</h2>
+            </div>
+            <div class="text-right mt-10 md:mt-0 hidden md:block">
+                <button class="w-20 h-20 bg-verde-neon text-zdark rounded-full flex items-center justify-center hover:scale-110 transition-transform">
+                    <i class="ph ph-arrow-up text-3xl"></i>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- BOTÓN DE ACCIÓN FLOTANTE (FAB) - Comportamiento Nativo Móvil -->
+    <button class="fixed md:hidden bottom-6 right-6 w-14 h-14 bg-violeta text-white rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.3)] hover:scale-110 transition-transform z-50">
+        <i class="ph ph-plus text-2xl"></i>
+    </button>
+
+</body>
+</html>

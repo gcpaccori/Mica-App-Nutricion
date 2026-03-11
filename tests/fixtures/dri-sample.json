@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "source_title": "DRI sample"
+  },
+  "tables": {
+    "total_water_and_macronutrients": {
+      "type": "RDA_AI",
+      "columns": [
+        { "key": "carbohydrate", "label": "Carbohydrate", "unit": "g/d" },
+        { "key": "total_fiber", "label": "Total Fiber", "unit": "g/d" },
+        { "key": "fat", "label": "Fat", "unit": "g/d" },
+        { "key": "protein", "label": "Protein", "unit": "g/d" }
+      ],
+      "rows": [
+        {
+          "group": "Females",
+          "life_stage": "19-30 y",
+          "values": {
+            "carbohydrate": 130,
+            "total_fiber": 25,
+            "fat": 70,
+            "protein": 46
+          }
+        }
+      ]
+    },
+    "elements_rda_ai": {
+      "type": "RDA_AI",
+      "columns": [
+        { "key": "sodium", "label": "Sodium", "unit": "g/d" },
+        { "key": "potassium", "label": "Potassium", "unit": "g/d" },
+        { "key": "iron", "label": "Iron", "unit": "mg/d" }
+      ],
+      "rows": [
+        {
+          "group": "Females",
+          "life_stage": "19-30 y",
+          "values": {
+            "sodium": 1.5,
+            "potassium": 2.6,
+            "iron": 18
+          }
+        }
+      ]
+    },
+    "vitamins_rda_ai": {
+      "type": "RDA_AI",
+      "columns": [
+        { "key": "vitamin_a", "label": "Vitamin A", "unit": "ug/d" },
+        { "key": "vitamin_c", "label": "Vitamin C", "unit": "mg/d" },
+        { "key": "folate", "label": "Folate", "unit": "ug/d" }
+      ],
+      "rows": [
+        {
+          "group": "Females",
+          "life_stage": "19-30 y",
+          "values": {
+            "vitamin_a": 700,
+            "vitamin_c": 75,
+            "folate": { "value": 400, "basis": "RDA_AI" }
+          }
+        }
+      ]
+    }
+  }
+}
