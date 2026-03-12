@@ -24,6 +24,8 @@ import {
   deleteIntakeDayAction,
   updateIntakeDayAction,
 } from "@/lib/actions/intake";
+import { FormModalShell } from "@/components/form-modal-shell";
+import { MobilePatientSidebar } from "@/components/mobile-patient-sidebar";
 import { NutritionBusinessBoard } from "@/components/nutrition-business-board";
 import { buildNutritionCase } from "@/lib/domain/nutrition-case";
 import { getDriConditionLabel } from "@/lib/dri/condition.js";
@@ -154,10 +156,27 @@ function formatAdequacy(value?: number | null) {
   return `${Number(value).toFixed(0)}%`;
 }
 
+function buildPatientTabHref(
+  patientId: string,
+  tab: Tab,
+  extra?: Record<string, string | number | null | undefined>,
+) {
+  const search = new URLSearchParams();
+  search.set("tab", tab);
+
+  Object.entries(extra ?? {}).forEach(([key, value]) => {
+    if (value == null || value === "") return;
+    search.set(key, String(value));
+  });
+
+  return `/patients/${patientId}?${search.toString()}`;
+}
+
 export default async function PatientDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = searchParams ? await searchParams : {};
   const message = msg(sp.message);
+  const modal = msg(sp.modal) ?? "";
   const activeTab = (tabs.includes(msg(sp.tab) as Tab) ? msg(sp.tab) : "overview") as Tab;
   const editMeasurementId = msg(sp.editMeasurement) ?? "";
   const editAssessmentId = msg(sp.editAssessment) ?? "";
@@ -316,6 +335,14 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
   const planPreviewSample = businessMenuPreview.slice(0, 8);
   const activeTabLabel = tabLabels[activeTab];
   const activeTabDescription = tabDescriptions[activeTab];
+  const mobileSidebarItems = tabs.map((tab, index) => ({
+    key: tab,
+    label: tabLabels[tab],
+    description: tabDescriptions[tab],
+    href: `/patients/${id}?tab=${tab}`,
+    active: activeTab === tab,
+    index: index + 1,
+  }));
   const today = new Date().toISOString().split("T")[0];
   const goalFormDefaults = {
     calculationMethod: selectedGoal?.calculation_method ?? (nutritionCase ? "fao_who_unu_workbook" : ""),
@@ -343,35 +370,35 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
     endDate: selectedGoal?.end_date ?? "",
     notes: selectedGoal?.notes ?? "",
   };
+  const measurementModalOpen = activeTab === "measurements" && (Boolean(selectedMeasurement) || modal === "measurement");
+  const assessmentModalOpen = activeTab === "assessments" && (Boolean(selectedAssessment) || modal === "assessment");
+  const goalModalOpen = activeTab === "goals" && (Boolean(selectedGoal) || modal === "goal");
+  const planModalOpen = activeTab === "plans" && modal === "plan";
+  const intakeModalOpen = activeTab === "intake" && (Boolean(selectedIntakeDay) || modal === "intake");
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:px-10 lg:py-14">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-14">
       {/* Header */}
-      <section className="panel-strong rounded-[2rem] p-8">
+      <section className="panel-strong rounded-[2rem] p-6 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Ficha clinica</p>
             <h1 className="headline mt-3 text-3xl font-semibold text-slate-950 md:text-4xl">
               {patient.first_name} {patient.last_name}
             </h1>
-            <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
-              <span>{patient.sex}</span>
-              <span>·</span>
-              <span>{patient.birth_date}</span>
-              <span>·</span>
-              <span>Actividad: {patient.activity_level ?? "sedentary"}</span>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
+              <span className="rounded-full bg-white/70 px-3 py-1">{patient.sex}</span>
+              <span className="rounded-full bg-white/70 px-3 py-1">{patient.birth_date}</span>
+              <span className="rounded-full bg-white/70 px-3 py-1">Actividad: {patient.activity_level ?? "sedentary"}</span>
               {lastMeasurement?.bmi && (
-                <>
-                  <span>·</span>
-                  <span>IMC: {Number(lastMeasurement.bmi).toFixed(1)}</span>
-                </>
+                <span className="rounded-full bg-white/70 px-3 py-1">IMC: {Number(lastMeasurement.bmi).toFixed(1)}</span>
               )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <a href={exportHref} className={btnPrimary}>Descargar Excel</a>
-            <Link href={`/patients?edit=${id}`} className={btnSecondary}>Editar ficha base</Link>
-            <Link href="/patients" className={btnSecondary}>← Pacientes</Link>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
+            <a href={exportHref} className={`${btnPrimary} w-full justify-center sm:w-auto`}>Descargar Excel</a>
+            <Link href={`/patients?edit=${id}`} className={`${btnSecondary} w-full justify-center sm:w-auto`}>Editar ficha base</Link>
+            <Link href="/patients" className={`${btnSecondary} w-full justify-center sm:w-auto`}>← Pacientes</Link>
           </div>
         </div>
       </section>
@@ -382,29 +409,30 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
         </div>
       )}
 
+      <MobilePatientSidebar currentLabel={activeTabLabel} items={mobileSidebarItems} />
+
       <div className="grid gap-6 xl:grid-cols-[19rem_minmax(0,1fr)] xl:items-start">
-        <aside className="space-y-4 xl:sticky xl:top-6">
-          <div className="panel rounded-[2rem] p-6">
+        <aside className="hidden space-y-4 xl:sticky xl:top-6 xl:block">
+          <div className="panel rounded-[2rem] p-5 md:p-6">
             <p className="eyebrow">Guía paso a paso</p>
             <h2 className="mt-3 text-xl font-semibold text-slate-950">Navegación simple para trabajar la ficha</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 hidden text-sm leading-6 text-slate-600 xl:block">
               Cada bloque explica qué se hace ahí. La idea es que cualquier persona pueda entrar, entender y avanzar sin adivinar.
             </p>
-
-            <nav className="mt-5 space-y-3" aria-label="Secciones de la ficha clínica">
+            <nav className="mt-4 space-y-2 xl:mt-5 xl:space-y-3" aria-label="Secciones de la ficha clínica">
               {tabs.map((t, index) => (
                 <Link
                   key={t}
                   href={`/patients/${id}?tab=${t}`}
-                  className={`block rounded-[1.4rem] border px-4 py-4 transition ${
+                  className={`block rounded-[1rem] border px-3 py-3 transition xl:rounded-[1.4rem] xl:px-4 xl:py-4 ${
                     activeTab === t
                       ? "border-[#0f5c4d] bg-[#0f5c4d] text-white shadow-[0_20px_60px_-32px_rgba(15,92,77,0.9)]"
                       : "border-slate-200 bg-white/80 text-slate-700 hover:border-slate-300 hover:bg-white"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3 xl:items-start">
                     <span
-                      className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold xl:mt-0.5 xl:h-8 xl:w-8 xl:text-xs ${
                         activeTab === t
                           ? "bg-white/18 text-white"
                           : "bg-[#f1f7f4] text-[#0f5c4d]"
@@ -417,11 +445,11 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
                         <p className={`text-sm font-semibold ${activeTab === t ? "text-white" : "text-slate-950"}`}>
                           {tabLabels[t]}
                         </p>
-                        <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${activeTab === t ? "text-white/80" : "text-slate-400"}`}>
+                        <span className={`hidden text-[11px] font-semibold uppercase tracking-[0.18em] xl:inline ${activeTab === t ? "text-white/80" : "text-slate-400"}`}>
                           {activeTab === t ? "Abierto" : "Entrar"}
                         </span>
                       </div>
-                      <p className={`mt-1 text-xs leading-5 ${activeTab === t ? "text-white/82" : "text-slate-500"}`}>
+                      <p className={`mt-1 hidden text-xs leading-5 xl:block ${activeTab === t ? "text-white/82" : "text-slate-500"}`}>
                         {tabDescriptions[t]}
                       </p>
                     </div>
@@ -431,7 +459,7 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
             </nav>
           </div>
 
-          <div className="panel rounded-[2rem] p-6">
+          <div className="panel rounded-[2rem] p-5 md:p-6">
             <p className="eyebrow">Pantalla actual</p>
             <h3 className="mt-3 text-lg font-semibold text-slate-950">{activeTabLabel}</h3>
             <p className="mt-2 text-sm leading-6 text-slate-600">{activeTabDescription}</p>
@@ -822,31 +850,22 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           <div className="panel rounded-[2rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="eyebrow">{selectedMeasurement ? "Editar medicion" : "Nueva medicion"}</p>
+                <p className="eyebrow">Acciones de medición</p>
                 <p className="mt-2 text-sm text-slate-500">
-                  {selectedMeasurement
-                    ? "Corrige la medición seleccionada o limpia el formulario para cargar una nueva."
-                    : "Registra peso, talla y perímetros para alimentar los cálculos del caso."}
+                  Crear y editar mediciones ahora usa modal para no dejar la captura clínica abierta todo el tiempo.
                 </p>
               </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={buildPatientTabHref(id, "measurements", { modal: "measurement" })} className={btnPrimary}>
+                Nueva medición
+              </Link>
               {selectedMeasurement ? (
-                <Link href={`/patients/${id}?tab=measurements`} className="text-sm font-semibold text-[#0f5c4d] hover:underline">
-                  Limpiar
-                </Link>
+                <span className="rounded-[1rem] bg-[#f1f7f4] px-4 py-3 text-sm text-slate-700">
+                  Editando {selectedMeasurement.measured_at}
+                </span>
               ) : null}
             </div>
-            <form action={selectedMeasurement ? updateMeasurementAction : createMeasurementAction} className="mt-4 grid gap-4 sm:grid-cols-2">
-              {selectedMeasurement ? <input type="hidden" name="id" value={selectedMeasurement.id} /> : null}
-              <input type="hidden" name="patient_id" value={id} />
-              <label className={labelClass}>Fecha <input name="measured_at" type="date" defaultValue={selectedMeasurement?.measured_at ?? today} className={inputClass} required /></label>
-              <label className={labelClass}>Peso (kg) <input name="weight_kg" type="number" step="0.1" defaultValue={selectedMeasurement?.weight_kg ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Talla (m) <input name="height_m" type="number" step="0.01" defaultValue={selectedMeasurement?.height_m ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Cintura (cm) <input name="waist_cm" type="number" step="0.1" defaultValue={selectedMeasurement?.waist_cm ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Cadera (cm) <input name="hip_cm" type="number" step="0.1" defaultValue={selectedMeasurement?.hip_cm ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Peso habitual (kg) <input name="usual_weight_kg" type="number" step="0.1" defaultValue={selectedMeasurement?.usual_weight_kg ?? ""} className={inputClass} /></label>
-              <label className="sm:col-span-2 block text-sm font-medium text-slate-700">Notas <textarea name="notes" rows={2} defaultValue={selectedMeasurement?.notes ?? ""} className={inputClass} /></label>
-              <button type="submit" className={`sm:col-span-2 ${btnPrimary}`}>{selectedMeasurement ? "Guardar cambios" : "Guardar medicion"}</button>
-            </form>
           </div>
 
           <div className="panel rounded-[2rem] p-7">
@@ -883,6 +902,31 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
             </div>
           </div>
         </div>
+
+        {measurementModalOpen ? (
+          <FormModalShell
+            title={selectedMeasurement ? "Editar medición" : "Nueva medición"}
+            eyebrow="Mediciones"
+            description={selectedMeasurement
+              ? "Corrige la medición seleccionada o elimina el registro si corresponde."
+              : "Registra peso, talla y perímetros para alimentar los cálculos del caso."}
+            closeHref={buildPatientTabHref(id, "measurements")}
+            widthClassName="max-w-3xl"
+          >
+            <form action={selectedMeasurement ? updateMeasurementAction : createMeasurementAction} className="grid gap-4 sm:grid-cols-2">
+              {selectedMeasurement ? <input type="hidden" name="id" value={selectedMeasurement.id} /> : null}
+              <input type="hidden" name="patient_id" value={id} />
+              <label className={labelClass}>Fecha <input name="measured_at" type="date" defaultValue={selectedMeasurement?.measured_at ?? today} className={inputClass} required /></label>
+              <label className={labelClass}>Peso (kg) <input name="weight_kg" type="number" step="0.1" defaultValue={selectedMeasurement?.weight_kg ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Talla (m) <input name="height_m" type="number" step="0.01" defaultValue={selectedMeasurement?.height_m ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Cintura (cm) <input name="waist_cm" type="number" step="0.1" defaultValue={selectedMeasurement?.waist_cm ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Cadera (cm) <input name="hip_cm" type="number" step="0.1" defaultValue={selectedMeasurement?.hip_cm ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Peso habitual (kg) <input name="usual_weight_kg" type="number" step="0.1" defaultValue={selectedMeasurement?.usual_weight_kg ?? ""} className={inputClass} /></label>
+              <label className="sm:col-span-2 block text-sm font-medium text-slate-700">Notas <textarea name="notes" rows={2} defaultValue={selectedMeasurement?.notes ?? ""} className={inputClass} /></label>
+              <button type="submit" className={`sm:col-span-2 ${btnPrimary}`}>{selectedMeasurement ? "Guardar cambios" : "Guardar medición"}</button>
+            </form>
+          </FormModalShell>
+        ) : null}
         </>
       )}
 
@@ -914,46 +958,22 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           <div className="panel rounded-[2rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="eyebrow">{selectedAssessment ? "Editar evaluacion" : "Nueva evaluacion alimentaria"}</p>
+                <p className="eyebrow">Acciones de evaluación</p>
                 <p className="mt-2 text-sm text-slate-500">
-                  {selectedAssessment
-                    ? "Ajusta la evaluación seleccionada o limpia el modo edición para registrar otra nueva."
-                    : "Registra apetito, hidratación y contexto alimentario del paciente."}
+                  Crea o edita la evaluación alimentaria en modal para moverte más rápido entre historial y captura.
                 </p>
               </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={buildPatientTabHref(id, "assessments", { modal: "assessment" })} className={btnPrimary}>
+                Nueva evaluación
+              </Link>
               {selectedAssessment ? (
-                <Link href={`/patients/${id}?tab=assessments`} className="text-sm font-semibold text-[#0f5c4d] hover:underline">
-                  Limpiar
-                </Link>
+                <span className="rounded-[1rem] bg-[#f1f7f4] px-4 py-3 text-sm text-slate-700">
+                  Editando {selectedAssessment.assessed_at}
+                </span>
               ) : null}
             </div>
-            <form action={selectedAssessment ? updateAssessmentAction : createAssessmentAction} className="mt-4 grid gap-4">
-              {selectedAssessment ? <input type="hidden" name="id" value={selectedAssessment.id} /> : null}
-              <input type="hidden" name="patient_id" value={id} />
-              <label className={labelClass}>Fecha <input name="assessed_at" type="date" defaultValue={selectedAssessment?.assessed_at ?? today} className={inputClass} required /></label>
-              <label className={labelClass}>Nivel de apetito
-                <select name="appetite_level" className={inputClass} defaultValue={selectedAssessment?.appetite_level ?? ""}>
-                  <option value="">-- Seleccionar --</option>
-                  <option value="bajo">Bajo</option>
-                  <option value="normal">Normal</option>
-                  <option value="aumentado">Aumentado</option>
-                </select>
-              </label>
-              <label className={labelClass}>Condicion fisiologica
-                <select name="physiological_condition" className={inputClass} defaultValue={selectedAssessment?.physiological_condition ?? ""}>
-                  <option value="">General</option>
-                  <option value="pregnancy">Embarazo</option>
-                  <option value="lactation">Lactancia</option>
-                </select>
-              </label>
-              <label className={labelClass}>Hidratacion (ml/dia) <input name="hydration_ml" type="number" step="100" defaultValue={selectedAssessment?.hydration_ml ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Recordatorio 24h <textarea name="recall_24h" rows={4} defaultValue={selectedAssessment?.recall_24h ?? ""} className={inputClass} placeholder="Desayuno: ... Almuerzo: ... Cena: ..." /></label>
-              <label className={labelClass}>Frecuencia alimentaria <textarea name="food_frequency_notes" rows={3} defaultValue={selectedAssessment?.food_frequency_notes ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Comida fuera del hogar <textarea name="eating_out_notes" rows={2} defaultValue={selectedAssessment?.eating_out_notes ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Barreras de adherencia <textarea name="adherence_barriers" rows={2} defaultValue={selectedAssessment?.adherence_barriers ?? ""} className={inputClass} /></label>
-              <label className={labelClass}>Notas clinicas <textarea name="clinical_notes" rows={3} defaultValue={selectedAssessment?.clinical_notes ?? ""} className={inputClass} /></label>
-              <button type="submit" className={btnPrimary}>{selectedAssessment ? "Guardar cambios" : "Guardar evaluacion"}</button>
-            </form>
           </div>
 
           <div className="panel rounded-[2rem] p-7">
@@ -987,6 +1007,46 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
             </div>
           </div>
         </div>
+
+        {assessmentModalOpen ? (
+          <FormModalShell
+            title={selectedAssessment ? "Editar evaluación" : "Nueva evaluación alimentaria"}
+            eyebrow="Evaluación"
+            description={selectedAssessment
+              ? "Ajusta la evaluación seleccionada o elimina el registro si corresponde."
+              : "Registra apetito, hidratación y contexto alimentario del paciente."}
+            closeHref={buildPatientTabHref(id, "assessments")}
+            widthClassName="max-w-4xl"
+          >
+            <form action={selectedAssessment ? updateAssessmentAction : createAssessmentAction} className="grid gap-4">
+              {selectedAssessment ? <input type="hidden" name="id" value={selectedAssessment.id} /> : null}
+              <input type="hidden" name="patient_id" value={id} />
+              <label className={labelClass}>Fecha <input name="assessed_at" type="date" defaultValue={selectedAssessment?.assessed_at ?? today} className={inputClass} required /></label>
+              <label className={labelClass}>Nivel de apetito
+                <select name="appetite_level" className={inputClass} defaultValue={selectedAssessment?.appetite_level ?? ""}>
+                  <option value="">-- Seleccionar --</option>
+                  <option value="bajo">Bajo</option>
+                  <option value="normal">Normal</option>
+                  <option value="aumentado">Aumentado</option>
+                </select>
+              </label>
+              <label className={labelClass}>Condición fisiológica
+                <select name="physiological_condition" className={inputClass} defaultValue={selectedAssessment?.physiological_condition ?? ""}>
+                  <option value="">General</option>
+                  <option value="pregnancy">Embarazo</option>
+                  <option value="lactation">Lactancia</option>
+                </select>
+              </label>
+              <label className={labelClass}>Hidratación (ml/día) <input name="hydration_ml" type="number" step="100" defaultValue={selectedAssessment?.hydration_ml ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Recordatorio 24h <textarea name="recall_24h" rows={4} defaultValue={selectedAssessment?.recall_24h ?? ""} className={inputClass} placeholder="Desayuno: ... Almuerzo: ... Cena: ..." /></label>
+              <label className={labelClass}>Frecuencia alimentaria <textarea name="food_frequency_notes" rows={3} defaultValue={selectedAssessment?.food_frequency_notes ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Comida fuera del hogar <textarea name="eating_out_notes" rows={2} defaultValue={selectedAssessment?.eating_out_notes ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Barreras de adherencia <textarea name="adherence_barriers" rows={2} defaultValue={selectedAssessment?.adherence_barriers ?? ""} className={inputClass} /></label>
+              <label className={labelClass}>Notas clínicas <textarea name="clinical_notes" rows={3} defaultValue={selectedAssessment?.clinical_notes ?? ""} className={inputClass} /></label>
+              <button type="submit" className={btnPrimary}>{selectedAssessment ? "Guardar cambios" : "Guardar evaluación"}</button>
+            </form>
+          </FormModalShell>
+        ) : null}
         </>
       )}
 
@@ -1019,60 +1079,24 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           <div className="panel rounded-[2rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="eyebrow">{selectedGoal ? "Editar objetivo nutricional" : "Nuevo objetivo nutricional"}</p>
+                <p className="eyebrow">Acciones del objetivo</p>
                 <p className="mt-2 text-xs text-slate-500">
-                  {selectedGoal
-                    ? "Edita la meta seleccionada. El caso nutricional vinculado se resincroniza al guardar."
-                    : nutritionCase
-                      ? `Precargado desde TMB ${nutritionCase.estimatedBmrKcal.toFixed(0)} kcal × factor ${nutritionCase.activityFactorUsed.toFixed(2)}.`
-                      : "Sin peso actual, la precarga automática del caso queda deshabilitada."}
+                  {nutritionCase
+                    ? `Abrirás un modal con precarga desde TMB ${nutritionCase.estimatedBmrKcal.toFixed(0)} kcal × factor ${nutritionCase.activityFactorUsed.toFixed(2)}.`
+                    : "Sin peso actual, la precarga automática del caso queda deshabilitada."}
                 </p>
               </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={buildPatientTabHref(id, "goals", { modal: "goal" })} className={btnPrimary}>
+                Nuevo objetivo
+              </Link>
               {selectedGoal ? (
-                <Link href={`/patients/${id}?tab=goals`} className="text-sm font-semibold text-[#0f5c4d] hover:underline">
-                  Limpiar
-                </Link>
+                <span className="rounded-[1rem] bg-[#f1f7f4] px-4 py-3 text-sm text-slate-700">
+                  Editando {selectedGoal.goal_type.replace("_", " ")}
+                </span>
               ) : null}
             </div>
-            <form action={selectedGoal ? updateGoalAction : createGoalAction} className="mt-4 grid gap-4 sm:grid-cols-2">
-              {selectedGoal ? <input type="hidden" name="id" value={selectedGoal.id} /> : null}
-              <input type="hidden" name="patient_id" value={id} />
-              {selectedGoal ? <input type="hidden" name="is_active" value={String(selectedGoal.is_active)} /> : null}
-              <input type="hidden" name="calculation_method" value={goalFormDefaults.calculationMethod} />
-              <input type="hidden" name="weight_reference_kg" value={goalFormDefaults.weightReferenceKg} />
-              <input type="hidden" name="estimated_bmr_kcal" value={goalFormDefaults.estimatedBmrKcal} />
-              <input type="hidden" name="activity_factor_used" value={goalFormDefaults.activityFactorUsed} />
-              <input type="hidden" name="target_protein_pct" value={goalFormDefaults.targetProteinPct} />
-              <input type="hidden" name="target_carbs_pct" value={goalFormDefaults.targetCarbsPct} />
-              <input type="hidden" name="target_fat_pct" value={goalFormDefaults.targetFatPct} />
-              <input type="hidden" name="target_protein_g_per_kg" value={goalFormDefaults.targetProteinGPerKg} />
-              <input type="hidden" name="target_carbs_g_per_kg" value={goalFormDefaults.targetCarbsGPerKg} />
-              <input type="hidden" name="target_fat_g_per_kg" value={goalFormDefaults.targetFatGPerKg} />
-              <input type="hidden" name="target_calcium_mg" value={goalFormDefaults.targetCalciumMg} />
-              <input type="hidden" name="target_iron_mg" value={goalFormDefaults.targetIronMg} />
-              <input type="hidden" name="target_vitamin_a_ug" value={goalFormDefaults.targetVitaminAUg} />
-              <input type="hidden" name="target_vitamin_c_mg" value={goalFormDefaults.targetVitaminCMg} />
-              <label className={`sm:col-span-2 ${labelClass}`}>Tipo de objetivo
-                <select name="goal_type" className={inputClass} defaultValue={selectedGoal?.goal_type ?? "weight_loss"} required>
-                  <option value="weight_loss">Perdida de peso</option>
-                  <option value="weight_gain">Ganancia de peso</option>
-                  <option value="maintenance">Mantenimiento</option>
-                  <option value="muscle_gain">Ganancia muscular</option>
-                  <option value="clinical">Clinico especifico</option>
-                </select>
-              </label>
-              <label className={labelClass}>Peso meta (kg) <input name="target_weight_kg" type="number" step="0.1" defaultValue={goalFormDefaults.targetWeightKg} className={inputClass} /></label>
-              <label className={labelClass}>Energia (kcal) <input name="target_energy_kcal" type="number" className={inputClass} defaultValue={goalFormDefaults.targetEnergyKcal} /></label>
-              <label className={labelClass}>Proteina (g) <input name="target_protein_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetProteinG} /></label>
-              <label className={labelClass}>Grasa (g) <input name="target_fat_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetFatG} /></label>
-              <label className={labelClass}>Carbohidratos (g) <input name="target_carbs_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetCarbsG} /></label>
-              <label className={labelClass}>Fibra (g) <input name="target_fiber_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetFiberG} /></label>
-              <label className={labelClass}>Sodio (mg) <input name="target_sodium_mg" type="number" className={inputClass} defaultValue={goalFormDefaults.targetSodiumMg} /></label>
-              <label className={labelClass}>Fecha inicio <input name="start_date" type="date" defaultValue={goalFormDefaults.startDate} className={inputClass} required /></label>
-              <label className={labelClass}>Fecha fin <input name="end_date" type="date" defaultValue={goalFormDefaults.endDate} className={inputClass} /></label>
-              <label className="sm:col-span-2 block text-sm font-medium text-slate-700">Notas <textarea name="notes" rows={2} defaultValue={goalFormDefaults.notes} className={inputClass} /></label>
-              <button type="submit" className={`sm:col-span-2 ${btnPrimary}`}>{selectedGoal ? "Guardar cambios" : "Crear objetivo"}</button>
-            </form>
           </div>
 
           <div className="panel rounded-[2rem] p-7">
@@ -1128,6 +1152,60 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
             </div>
           </div>
         </div>
+
+        {goalModalOpen ? (
+          <FormModalShell
+            title={selectedGoal ? "Editar objetivo nutricional" : "Nuevo objetivo nutricional"}
+            eyebrow="Objetivos"
+            description={selectedGoal
+              ? "Edita la meta seleccionada. El caso nutricional vinculado se resincroniza al guardar."
+              : nutritionCase
+                ? `Precargado desde TMB ${nutritionCase.estimatedBmrKcal.toFixed(0)} kcal × factor ${nutritionCase.activityFactorUsed.toFixed(2)}.`
+                : "Sin peso actual, la precarga automática del caso queda deshabilitada."}
+            closeHref={buildPatientTabHref(id, "goals")}
+            widthClassName="max-w-5xl"
+          >
+            <form action={selectedGoal ? updateGoalAction : createGoalAction} className="grid gap-4 sm:grid-cols-2">
+              {selectedGoal ? <input type="hidden" name="id" value={selectedGoal.id} /> : null}
+              <input type="hidden" name="patient_id" value={id} />
+              {selectedGoal ? <input type="hidden" name="is_active" value={String(selectedGoal.is_active)} /> : null}
+              <input type="hidden" name="calculation_method" value={goalFormDefaults.calculationMethod} />
+              <input type="hidden" name="weight_reference_kg" value={goalFormDefaults.weightReferenceKg} />
+              <input type="hidden" name="estimated_bmr_kcal" value={goalFormDefaults.estimatedBmrKcal} />
+              <input type="hidden" name="activity_factor_used" value={goalFormDefaults.activityFactorUsed} />
+              <input type="hidden" name="target_protein_pct" value={goalFormDefaults.targetProteinPct} />
+              <input type="hidden" name="target_carbs_pct" value={goalFormDefaults.targetCarbsPct} />
+              <input type="hidden" name="target_fat_pct" value={goalFormDefaults.targetFatPct} />
+              <input type="hidden" name="target_protein_g_per_kg" value={goalFormDefaults.targetProteinGPerKg} />
+              <input type="hidden" name="target_carbs_g_per_kg" value={goalFormDefaults.targetCarbsGPerKg} />
+              <input type="hidden" name="target_fat_g_per_kg" value={goalFormDefaults.targetFatGPerKg} />
+              <input type="hidden" name="target_calcium_mg" value={goalFormDefaults.targetCalciumMg} />
+              <input type="hidden" name="target_iron_mg" value={goalFormDefaults.targetIronMg} />
+              <input type="hidden" name="target_vitamin_a_ug" value={goalFormDefaults.targetVitaminAUg} />
+              <input type="hidden" name="target_vitamin_c_mg" value={goalFormDefaults.targetVitaminCMg} />
+              <label className={`sm:col-span-2 ${labelClass}`}>Tipo de objetivo
+                <select name="goal_type" className={inputClass} defaultValue={selectedGoal?.goal_type ?? "weight_loss"} required>
+                  <option value="weight_loss">Perdida de peso</option>
+                  <option value="weight_gain">Ganancia de peso</option>
+                  <option value="maintenance">Mantenimiento</option>
+                  <option value="muscle_gain">Ganancia muscular</option>
+                  <option value="clinical">Clinico especifico</option>
+                </select>
+              </label>
+              <label className={labelClass}>Peso meta (kg) <input name="target_weight_kg" type="number" step="0.1" defaultValue={goalFormDefaults.targetWeightKg} className={inputClass} /></label>
+              <label className={labelClass}>Energia (kcal) <input name="target_energy_kcal" type="number" className={inputClass} defaultValue={goalFormDefaults.targetEnergyKcal} /></label>
+              <label className={labelClass}>Proteina (g) <input name="target_protein_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetProteinG} /></label>
+              <label className={labelClass}>Grasa (g) <input name="target_fat_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetFatG} /></label>
+              <label className={labelClass}>Carbohidratos (g) <input name="target_carbs_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetCarbsG} /></label>
+              <label className={labelClass}>Fibra (g) <input name="target_fiber_g" type="number" className={inputClass} defaultValue={goalFormDefaults.targetFiberG} /></label>
+              <label className={labelClass}>Sodio (mg) <input name="target_sodium_mg" type="number" className={inputClass} defaultValue={goalFormDefaults.targetSodiumMg} /></label>
+              <label className={labelClass}>Fecha inicio <input name="start_date" type="date" defaultValue={goalFormDefaults.startDate} className={inputClass} required /></label>
+              <label className={labelClass}>Fecha fin <input name="end_date" type="date" defaultValue={goalFormDefaults.endDate} className={inputClass} /></label>
+              <label className="sm:col-span-2 block text-sm font-medium text-slate-700">Notas <textarea name="notes" rows={2} defaultValue={goalFormDefaults.notes} className={inputClass} /></label>
+              <button type="submit" className={`sm:col-span-2 ${btnPrimary}`}>{selectedGoal ? "Guardar cambios" : "Crear objetivo"}</button>
+            </form>
+          </FormModalShell>
+        ) : null}
         </>
       )}
 
@@ -1160,40 +1238,11 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           <div className="panel rounded-[2rem] p-7">
             <p className="eyebrow">Nuevo plan alimentario</p>
             <p className="mt-2 text-xs text-slate-500">Las metas se precargan con el caso nutricional calculado y se completan con DRI para fibra y sodio: {physiologicalConditionLabel(resolvedCondition)}{referenceLifeStageLabel ? ` · ${referenceLifeStageLabel}` : ""}.</p>
-            <form action={createDietPlanAction} className="mt-4 grid gap-4 sm:grid-cols-2">
-              <input type="hidden" name="patient_id" value={id} />
-              <label className={`sm:col-span-2 ${labelClass}`}>Nombre del plan <input name="name" className={inputClass} placeholder="Plan semana 1" required /></label>
-              <label className={labelClass}>Tipo de objetivo
-                <select name="objective_type" className={inputClass} required>
-                  <option value="weight_loss">Perdida de peso</option>
-                  <option value="weight_gain">Ganancia de peso</option>
-                  <option value="maintenance">Mantenimiento</option>
-                  <option value="muscle_gain">Ganancia muscular</option>
-                  <option value="clinical">Clinico</option>
-                </select>
-              </label>
-              <label className={labelClass}>Tipo de dieta <input name="diet_type" className={inputClass} placeholder="Ej: Hipocalórica, DASH, etc." /></label>
-              <label className={labelClass}>Fecha inicio <input name="start_date" type="date" defaultValue={today} className={inputClass} required /></label>
-              <label className={labelClass}>Fecha fin <input name="end_date" type="date" className={inputClass} /></label>
-              <label className={labelClass}>Energia (kcal/dia) <input name="daily_energy_target_kcal" type="number" className={inputClass} defaultValue={nutritionCase?.estimatedEnergyRequirementKcal ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.estimatedEnergyRequirementKcal).toFixed(0)}` : undefined} /></label>
-              <label className={labelClass}>Proteina (g/dia) <input name="daily_protein_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.proteinGrams ?? patientDriTargets.daily_protein_target_g ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.proteinGrams).toFixed(0)}` : patientDriTargets.daily_protein_target_g ? `DRI ${Number(patientDriTargets.daily_protein_target_g).toFixed(0)}` : undefined} /></label>
-              <label className={labelClass}>Grasa (g/dia) <input name="daily_fat_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.fatGrams ?? patientDriTargets.daily_fat_target_g ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.fatGrams).toFixed(0)}` : undefined} /></label>
-              <label className={labelClass}>Carbohidratos (g/dia) <input name="daily_carbs_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.carbsGrams ?? patientDriTargets.daily_carbs_target_g ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.carbsGrams).toFixed(0)}` : patientDriTargets.daily_carbs_target_g ? `DRI ${Number(patientDriTargets.daily_carbs_target_g).toFixed(0)}` : undefined} /></label>
-              <label className={labelClass}>Fibra (g/dia) <input name="daily_fiber_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.fiberTargetG ?? patientDriTargets.daily_fiber_target_g ?? undefined} placeholder={patientDriTargets.daily_fiber_target_g ? `DRI ${Number(patientDriTargets.daily_fiber_target_g).toFixed(0)}` : undefined} /></label>
-              <label className={labelClass}>Sodio (mg/dia) <input name="daily_sodium_target_mg" type="number" className={inputClass} defaultValue={nutritionCase?.sodiumTargetMg ?? patientDriTargets.daily_sodium_target_mg ?? undefined} placeholder={patientDriTargets.daily_sodium_target_mg ? `DRI ${Number(patientDriTargets.daily_sodium_target_mg).toFixed(0)}` : undefined} /></label>
-              {goals?.filter(g => g.is_active).length ? (
-                <label className={`sm:col-span-2 ${labelClass}`}>Objetivo vinculado
-                  <select name="goal_id" className={inputClass}>
-                    <option value="">-- Sin vincular --</option>
-                    {goals.filter(g => g.is_active).map(g => (
-                      <option key={g.id} value={g.id}>{g.goal_type.replace("_"," ")} - {g.target_energy_kcal ? `${Number(g.target_energy_kcal).toFixed(0)} kcal` : "sin energia"}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              <label className="sm:col-span-2 block text-sm font-medium text-slate-700">Notas <textarea name="notes" rows={2} className={inputClass} /></label>
-              <button type="submit" className={`sm:col-span-2 ${btnPrimary}`}>Crear plan (7 dias)</button>
-            </form>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={buildPatientTabHref(id, "plans", { modal: "plan" })} className={btnPrimary}>
+                Crear plan
+              </Link>
+            </div>
           </div>
 
           <div className="panel rounded-[2rem] p-7">
@@ -1234,6 +1283,51 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
             </div>
           </div>
         </div>
+
+        {planModalOpen ? (
+          <FormModalShell
+            title="Nuevo plan alimentario"
+            eyebrow="Planes"
+            description={`Las metas se precargan con el caso nutricional calculado y se completan con DRI para fibra y sodio: ${physiologicalConditionLabel(resolvedCondition)}${referenceLifeStageLabel ? ` · ${referenceLifeStageLabel}` : ""}.`}
+            closeHref={buildPatientTabHref(id, "plans")}
+            widthClassName="max-w-5xl"
+          >
+            <form action={createDietPlanAction} className="grid gap-4 sm:grid-cols-2">
+              <input type="hidden" name="patient_id" value={id} />
+              <label className={`sm:col-span-2 ${labelClass}`}>Nombre del plan <input name="name" className={inputClass} placeholder="Plan semana 1" required /></label>
+              <label className={labelClass}>Tipo de objetivo
+                <select name="objective_type" className={inputClass} required>
+                  <option value="weight_loss">Perdida de peso</option>
+                  <option value="weight_gain">Ganancia de peso</option>
+                  <option value="maintenance">Mantenimiento</option>
+                  <option value="muscle_gain">Ganancia muscular</option>
+                  <option value="clinical">Clinico</option>
+                </select>
+              </label>
+              <label className={labelClass}>Tipo de dieta <input name="diet_type" className={inputClass} placeholder="Ej: Hipocalórica, DASH, etc." /></label>
+              <label className={labelClass}>Fecha inicio <input name="start_date" type="date" defaultValue={today} className={inputClass} required /></label>
+              <label className={labelClass}>Fecha fin <input name="end_date" type="date" className={inputClass} /></label>
+              <label className={labelClass}>Energia (kcal/dia) <input name="daily_energy_target_kcal" type="number" className={inputClass} defaultValue={nutritionCase?.estimatedEnergyRequirementKcal ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.estimatedEnergyRequirementKcal).toFixed(0)}` : undefined} /></label>
+              <label className={labelClass}>Proteina (g/dia) <input name="daily_protein_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.proteinGrams ?? patientDriTargets.daily_protein_target_g ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.proteinGrams).toFixed(0)}` : patientDriTargets.daily_protein_target_g ? `DRI ${Number(patientDriTargets.daily_protein_target_g).toFixed(0)}` : undefined} /></label>
+              <label className={labelClass}>Grasa (g/dia) <input name="daily_fat_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.fatGrams ?? patientDriTargets.daily_fat_target_g ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.fatGrams).toFixed(0)}` : undefined} /></label>
+              <label className={labelClass}>Carbohidratos (g/dia) <input name="daily_carbs_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.carbsGrams ?? patientDriTargets.daily_carbs_target_g ?? undefined} placeholder={nutritionCase ? `Caso ${Number(nutritionCase.carbsGrams).toFixed(0)}` : patientDriTargets.daily_carbs_target_g ? `DRI ${Number(patientDriTargets.daily_carbs_target_g).toFixed(0)}` : undefined} /></label>
+              <label className={labelClass}>Fibra (g/dia) <input name="daily_fiber_target_g" type="number" className={inputClass} defaultValue={nutritionCase?.fiberTargetG ?? patientDriTargets.daily_fiber_target_g ?? undefined} placeholder={patientDriTargets.daily_fiber_target_g ? `DRI ${Number(patientDriTargets.daily_fiber_target_g).toFixed(0)}` : undefined} /></label>
+              <label className={labelClass}>Sodio (mg/dia) <input name="daily_sodium_target_mg" type="number" className={inputClass} defaultValue={nutritionCase?.sodiumTargetMg ?? patientDriTargets.daily_sodium_target_mg ?? undefined} placeholder={patientDriTargets.daily_sodium_target_mg ? `DRI ${Number(patientDriTargets.daily_sodium_target_mg).toFixed(0)}` : undefined} /></label>
+              {goals?.filter(g => g.is_active).length ? (
+                <label className={`sm:col-span-2 ${labelClass}`}>Objetivo vinculado
+                  <select name="goal_id" className={inputClass}>
+                    <option value="">-- Sin vincular --</option>
+                    {goals.filter(g => g.is_active).map(g => (
+                      <option key={g.id} value={g.id}>{g.goal_type.replace("_"," ")} - {g.target_energy_kcal ? `${Number(g.target_energy_kcal).toFixed(0)} kcal` : "sin energia"}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <label className="sm:col-span-2 block text-sm font-medium text-slate-700">Notas <textarea name="notes" rows={2} className={inputClass} /></label>
+              <button type="submit" className={`sm:col-span-2 ${btnPrimary}`}>Crear plan (7 dias)</button>
+            </form>
+          </FormModalShell>
+        ) : null}
         </>
       )}
 
@@ -1266,35 +1360,22 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           <div className="panel rounded-[2rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="eyebrow">{selectedIntakeDay ? "Editar dia de consumo" : "Nuevo dia de consumo"}</p>
+                <p className="eyebrow">Acciones de consumo</p>
                 <p className="mt-2 text-sm text-slate-500">
-                  {selectedIntakeDay
-                    ? "Ajusta la fecha o el plan vinculado antes de entrar al detalle de comidas."
-                    : "Crea el día base y luego completa comidas e ítems desde la pantalla de consumo."}
+                  Crea o edita el día de consumo desde modal, y luego entra al detalle de comidas cuando toque cuantificar.
                 </p>
               </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={buildPatientTabHref(id, "intake", { modal: "intake" })} className={btnPrimary}>
+                Nuevo día de consumo
+              </Link>
               {selectedIntakeDay ? (
-                <Link href={`/patients/${id}?tab=intake`} className="text-sm font-semibold text-[#0f5c4d] hover:underline">
-                  Limpiar
-                </Link>
+                <span className="rounded-[1rem] bg-[#f1f7f4] px-4 py-3 text-sm text-slate-700">
+                  Editando {selectedIntakeDay.intake_date}
+                </span>
               ) : null}
             </div>
-            <form action={selectedIntakeDay ? updateIntakeDayAction : createIntakeDayAction} className="mt-4 grid gap-4">
-              {selectedIntakeDay ? <input type="hidden" name="id" value={selectedIntakeDay.id} /> : null}
-              <input type="hidden" name="patient_id" value={id} />
-              <label className={labelClass}>Fecha <input name="intake_date" type="date" defaultValue={selectedIntakeDay?.intake_date ?? today} className={inputClass} required /></label>
-              {plans?.filter(p => p.status === "active").length ? (
-                <label className={labelClass}>Plan asociado
-                  <select name="plan_id" className={inputClass} defaultValue={selectedIntakeDay?.plan_id ?? ""}>
-                    <option value="">-- Sin plan --</option>
-                    {plans.filter(p => p.status === "active").map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              <button type="submit" className={btnPrimary}>{selectedIntakeDay ? "Guardar cambios" : "Crear dia de consumo"}</button>
-            </form>
           </div>
 
           <div className="panel rounded-[2rem] p-7">
@@ -1331,6 +1412,35 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
             </div>
           </div>
         </div>
+
+        {intakeModalOpen ? (
+          <FormModalShell
+            title={selectedIntakeDay ? "Editar día de consumo" : "Nuevo día de consumo"}
+            eyebrow="Consumo real"
+            description={selectedIntakeDay
+              ? "Ajusta la fecha o el plan vinculado antes de entrar al detalle de comidas."
+              : "Crea el día base y luego completa comidas e ítems desde la pantalla de consumo."}
+            closeHref={buildPatientTabHref(id, "intake")}
+            widthClassName="max-w-3xl"
+          >
+            <form action={selectedIntakeDay ? updateIntakeDayAction : createIntakeDayAction} className="grid gap-4">
+              {selectedIntakeDay ? <input type="hidden" name="id" value={selectedIntakeDay.id} /> : null}
+              <input type="hidden" name="patient_id" value={id} />
+              <label className={labelClass}>Fecha <input name="intake_date" type="date" defaultValue={selectedIntakeDay?.intake_date ?? today} className={inputClass} required /></label>
+              {plans?.filter(p => p.status === "active").length ? (
+                <label className={labelClass}>Plan asociado
+                  <select name="plan_id" className={inputClass} defaultValue={selectedIntakeDay?.plan_id ?? ""}>
+                    <option value="">-- Sin plan --</option>
+                    {plans.filter(p => p.status === "active").map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <button type="submit" className={btnPrimary}>{selectedIntakeDay ? "Guardar cambios" : "Crear día de consumo"}</button>
+            </form>
+          </FormModalShell>
+        ) : null}
         </>
       )}
 
@@ -1372,7 +1482,25 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           <div className="panel rounded-[2rem] p-7">
             <p className="eyebrow">Evolucion de mediciones</p>
             {measurements && measurements.length > 1 ? (
-              <div className="mt-4 overflow-x-auto">
+              <>
+              <div className="mt-4 grid gap-3 md:hidden">
+                {measurements.map((m) => (
+                  <article key={m.id} className="rounded-[1.25rem] border border-slate-200 bg-white/70 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-slate-950">{m.measured_at}</p>
+                      <span className="rounded-full bg-[#f1f7f4] px-3 py-1 text-xs font-semibold text-[#0f5c4d]">
+                        {m.bmi ? `IMC ${Number(m.bmi).toFixed(1)}` : "Sin IMC"}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Peso: {m.weight_kg ? `${Number(m.weight_kg).toFixed(1)} kg` : "—"}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Cintura: {m.waist_cm ? `${Number(m.waist_cm).toFixed(1)} cm` : "—"}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2 col-span-2">Δ Peso: {m.weight_change_pct ? `${Number(m.weight_change_pct).toFixed(1)}%` : "—"}</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -1396,6 +1524,7 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
                   </tbody>
                 </table>
               </div>
+              </>
             ) : <p className="mt-4 text-sm text-slate-500">Se necesitan al menos 2 mediciones para ver la evolucion.</p>}
           </div>
 
@@ -1431,7 +1560,33 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           <div className="panel rounded-[2rem] p-7 xl:col-span-2">
             <p className="eyebrow">Comparación plan vs consumo</p>
             {dailyComparisons.length ? (
-              <div className="mt-4 overflow-x-auto">
+              <>
+              <div className="mt-4 grid gap-3 md:hidden">
+                {dailyComparisons.map((row) => (
+                  <article key={`${row.intake_date}-${row.plan_id ?? "sin-plan"}`} className="rounded-[1.25rem] border border-slate-200 bg-white/70 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-slate-950">{row.intake_date}</p>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        (row.adherence_pct ?? 0) >= 90
+                          ? "bg-[#d6ebe3] text-[#0f5c4d]"
+                          : (row.adherence_pct ?? 0) >= 70
+                            ? "bg-[#fff3db] text-[#9a5a1f]"
+                            : "bg-slate-200 text-slate-600"
+                      }`}>
+                        {formatAdequacy(row.adherence_pct)} adherencia
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Plan: {row.planned_energy_kcal ? `${Number(row.planned_energy_kcal).toFixed(0)} kcal` : "—"}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Consumo: {row.actual_energy_kcal ? `${Number(row.actual_energy_kcal).toFixed(0)} kcal` : "—"}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Adeq. energía: {formatAdequacy(row.energy_adequacy_pct)}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Adeq. proteína: {formatAdequacy(row.protein_adequacy_pct)}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2 sm:col-span-2">Adeq. fibra: {formatAdequacy(row.fiber_adequacy_pct)}</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -1469,6 +1624,7 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
                   </tbody>
                 </table>
               </div>
+              </>
             ) : <p className="mt-4 text-sm text-slate-500">Aún no hay suficientes días con plan y consumo para contrastar adherencia.</p>}
           </div>
 

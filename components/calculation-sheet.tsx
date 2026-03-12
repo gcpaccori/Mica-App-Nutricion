@@ -129,7 +129,22 @@ export function CalculationSheet({
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <article className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">4. Distribución en cinco comidas</p>
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 grid gap-3 md:hidden">
+            {meals.length ? meals.map((meal) => (
+              <article key={meal.label} className="rounded-[1rem] border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-semibold text-slate-950">{meal.label}</p>
+                  <span className="rounded-full bg-[#f1f7f4] px-3 py-1 text-xs font-semibold text-[#0f5c4d]">{formatAdequacy(meal.adequacyPct)}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
+                  <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">% día: {meal.targetPct != null ? `${formatValue(meal.targetPct * 100)}%` : "—"}</div>
+                  <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Meta: {meal.targetKcal != null ? `${formatValue(meal.targetKcal)} kcal` : "—"}</div>
+                  <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2 col-span-2">Real: {meal.actualKcal != null ? `${formatValue(meal.actualKcal)} kcal` : "—"}</div>
+                </div>
+              </article>
+            )) : <p className="rounded-[1rem] border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">Sin comidas cuantificadas todavía.</p>}
+          </div>
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -161,7 +176,27 @@ export function CalculationSheet({
 
         <article className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">5. Total del día vs requerimiento</p>
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 grid gap-3 md:hidden">
+            {[
+              { label: "Energía", target: `${formatValue(energyTargetKcal)} kcal`, actual: `${formatValue(totalEnergyKcal)} kcal`, adequacy: formatAdequacy(energyAdequacyPct) },
+              { label: "Proteína", target: `${formatValue(proteinTargetG, 1)} g`, actual: `${formatValue(totalProteinG, 1)} g`, adequacy: formatAdequacy(proteinAdequacyPct) },
+              { label: "Grasa", target: `${formatValue(fatTargetG, 1)} g`, actual: `${formatValue(totalFatG, 1)} g`, adequacy: formatAdequacy(fatAdequacyPct) },
+              { label: "Carbohidratos", target: `${formatValue(carbsTargetG, 1)} g`, actual: `${formatValue(totalCarbsG, 1)} g`, adequacy: formatAdequacy(carbsAdequacyPct) },
+              { label: "Fibra", target: `${formatValue(fiberTargetG, 1)} g`, actual: `${formatValue(totalFiberG, 1)} g`, adequacy: formatAdequacy(fiberAdequacyPct) },
+            ].map((row) => (
+              <article key={row.label} className="rounded-[1rem] border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-semibold text-slate-950">{row.label}</p>
+                  <span className="rounded-full bg-[#f1f7f4] px-3 py-1 text-xs font-semibold text-[#0f5c4d]">{row.adequacy}</span>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                  <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Meta: {row.target}</div>
+                  <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Real: {row.actual}</div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -186,7 +221,22 @@ export function CalculationSheet({
       <article className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white/70 p-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">6. Aporte por alimento</p>
         <p className="mt-2 text-sm leading-7 text-slate-600">Cada fila ya representa el resultado de aplicar la regla: nutriente_aportado = nutriente_100g × gramos / 100.</p>
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 grid gap-3 md:hidden">
+          {items.length ? items.map((item, index) => (
+            <article key={`${item.alimento}-${index}`} className="rounded-[1rem] border border-slate-200 bg-white p-4">
+              <p className="font-semibold text-slate-950">{item.alimento}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
+                <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Gramos: {formatValue(item.grams)}</div>
+                <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Kcal: {formatValue(item.energyKcal)}</div>
+                <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Prot: {formatValue(item.proteinG, 1)}</div>
+                <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Grasa: {formatValue(item.fatG, 1)}</div>
+                <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Carb: {formatValue(item.carbsG, 1)}</div>
+                <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Fibra: {formatValue(item.fiberG, 1)}</div>
+              </div>
+            </article>
+          )) : <p className="rounded-[1rem] border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">Sin alimentos cuantificados todavía.</p>}
+        </div>
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500">

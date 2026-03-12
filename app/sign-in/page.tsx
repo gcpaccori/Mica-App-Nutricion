@@ -18,8 +18,8 @@ function getMessage(value?: string | string[]) {
 async function getSupabaseStatus() {
   if (!hasSupabaseEnv()) {
     return {
-      label: "Variables pendientes",
-      detail: "Faltan variables de entorno para inicializar Supabase.",
+      label: "Acceso en preparacion",
+      detail: "Estamos terminando la configuracion del ingreso seguro.",
       tone: "warning" as const,
     };
   }
@@ -28,8 +28,8 @@ async function getSupabaseStatus() {
 
   if (!supabase) {
     return {
-      label: "Variables pendientes",
-      detail: "No se pudo crear el cliente de servidor de Supabase.",
+      label: "Acceso en preparacion",
+      detail: "Todavia no pudimos abrir el acceso seguro de la app.",
       tone: "warning" as const,
     };
   }
@@ -41,16 +41,15 @@ async function getSupabaseStatus() {
 
   if (error) {
     return {
-      label: "Supabase con variables pero migracion incompleta",
-      detail:
-        "Se encontro Supabase, pero la funcion calculate_bmi no respondio. Ejecuta la migracion clinica inicial.",
+      label: "Ingreso casi listo",
+      detail: "La app ya reconoce la conexion, pero aun falta completar el cierre del acceso.",
       tone: "warning" as const,
     };
   }
 
   return {
-    label: "Supabase y migracion clinica listos",
-    detail: `Conexion operativa. Prueba de backend correcta con calculate_bmi = ${data}.`,
+    label: "Acceso listo",
+    detail: `Tu cuenta puede entrar y confirmar correo desde la version oficial de la app.`,
     tone: "success" as const,
   };
 }
@@ -81,114 +80,142 @@ export default async function SignInPage({
     message?.toLowerCase().includes("confirma") ||
     message?.toLowerCase().includes("email not confirmed");
 
-  return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-8 lg:px-10 lg:py-10">
-      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="panel-strong editorial-grid relative overflow-hidden rounded-none border border-black p-8 lg:p-10">
-          <div className="absolute inset-x-0 top-0 h-1 bg-[#9d6cff]" />
-          <p className="display-kicker">Access control / roles / auth</p>
-          <h1 className="headline mt-5 text-5xl leading-[0.92] text-black md:text-6xl">
-            LA CAPA DE SEGURIDAD TAMBIEN DEBE SENTIRSE COMO PRODUCTO.
-          </h1>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-black/68">
-            Esta entrada resuelve autenticacion con Supabase y prepara el rol
-            operativo antes de tocar dashboard, paciente, plan o reportes.
-          </p>
+  const wellnessNotes = [
+    "Los planes que se adaptan a la rutina suelen sostenerse mejor con el tiempo.",
+    "Comer con estructura diaria ayuda a tomar decisiones con menos cansancio.",
+    "La adherencia mejora cuando el plan respeta gustos, cultura y horarios reales.",
+  ];
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <div className="border border-black bg-black p-5 text-[#f0efeb]">
-              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#4cff8a]">Config</p>
-              <p className="mt-3 font-[family-name:var(--font-syne)] text-2xl font-bold uppercase tracking-[-0.05em]">
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(214,235,227,0.62),_transparent_32%),linear-gradient(180deg,_#fffdf8_0%,_#f5efe4_100%)]">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <div className="grid gap-4 sm:grid-cols-2 sm:grid-rows-[1.1fr_0.9fr]">
+            <article className="relative overflow-hidden rounded-[2rem] border border-[#dfd4c4] bg-[#f3e6d1] sm:row-span-2">
+              <img
+                src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1200&q=80"
+                alt="Preparacion de alimentos frescos con vegetales y frutas"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#2c241c]/72 via-[#2c241c]/22 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/70">Bienestar diario</p>
+                <h1 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">
+                  Ingresar deberia sentirse tan claro y amable como una buena consulta.
+                </h1>
+              </div>
+            </article>
+
+            <article className="relative overflow-hidden rounded-[2rem] border border-[#d6dccf] bg-[#deeadf]">
+              <img
+                src="https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=1000&q=80"
+                alt="Mesa con alimentos coloridos y preparaciones frescas"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#305847]/48 to-transparent" />
+            </article>
+
+            <article className="rounded-[2rem] border border-[#dfe4d8] bg-[#f8fbf7] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#58705f]">Notas utiles</p>
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#4d5c53]">
+                {wellnessNotes.map((note) => (
+                  <li key={note} className="rounded-[1.25rem] bg-white px-4 py-3 shadow-[0_18px_40px_-34px_rgba(47,107,82,0.55)]">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+
+          <div className="rounded-[2rem] border border-[#ddd2c0] bg-[#fffaf3]/95 p-7 shadow-[0_30px_90px_-44px_rgba(98,72,38,0.32)] sm:p-8 lg:p-10">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#8c6a3d]">Acceso</p>
+                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-[#2f2418] sm:text-4xl">
+                  Entra, confirma tu correo y sigue cuidando el proceso sin rodeos.
+                </h2>
+              </div>
+              <div className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] ${status.tone === "success" ? "bg-[#e4f4ea] text-[#2f6b52]" : "bg-[#fff1da] text-[#9a6a27]"}`}>
                 {status.label}
-              </p>
-              <p className="mt-3 text-sm leading-7 text-white/72">{status.detail}</p>
+              </div>
             </div>
-            <div className="border border-black/16 bg-white/68 p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-black/48">
-                Roles base
-              </p>
-              <p className="mt-3 font-[family-name:var(--font-syne)] text-2xl font-bold uppercase tracking-[-0.05em] text-black">
-                admin / nutritionist / patient
-              </p>
-              <p className="mt-3 text-sm leading-7 text-black/68">
-                El control fino se resuelve desde roles y asignaciones ya
-                cargadas en la base.
-              </p>
+
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-[#6c5740] sm:text-base">
+              {status.detail}
+            </p>
+
+            <div className="mt-8 grid gap-5 xl:grid-cols-2">
+              <form action={signInAction} className="rounded-[1.7rem] border border-[#e8dccb] bg-white p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#8c6a3d]">Ya tengo cuenta</p>
+                <input type="hidden" name="next" value={next} />
+                <div className="mt-5 space-y-4">
+                  <label className="block text-sm font-medium text-[#5f4b35]">
+                    Correo
+                    <input
+                      name="email"
+                      type="email"
+                      className="mt-2 w-full rounded-[1rem] border border-[#e6dccf] bg-[#fffdf9] px-4 py-3 text-sm text-[#2f2418] outline-none transition focus:border-[#2f6b52]"
+                      placeholder="nutri@consulta.com"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#5f4b35]">
+                    Contrasena
+                    <input
+                      name="password"
+                      type="password"
+                      className="mt-2 w-full rounded-[1rem] border border-[#e6dccf] bg-[#fffdf9] px-4 py-3 text-sm text-[#2f2418] outline-none transition focus:border-[#2f6b52]"
+                      placeholder="Ingresa tu contrasena"
+                      required
+                    />
+                  </label>
+                </div>
+                <button type="submit" className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#2f6b52] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#255640]">
+                  Iniciar sesion
+                </button>
+              </form>
+
+              <form action={signUpAction} className="rounded-[1.7rem] border border-[#dce6dc] bg-[#f8fbf7] p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#55705d]">Crear cuenta</p>
+                <div className="mt-5 space-y-4">
+                  <label className="block text-sm font-medium text-[#425248]">
+                    Nombre completo
+                    <input
+                      name="full_name"
+                      type="text"
+                      className="mt-2 w-full rounded-[1rem] border border-[#dce4db] bg-white px-4 py-3 text-sm text-[#23362c] outline-none transition focus:border-[#2f6b52]"
+                      placeholder="Micaela Gonzales"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#425248]">
+                    Correo
+                    <input
+                      name="email"
+                      type="email"
+                      className="mt-2 w-full rounded-[1rem] border border-[#dce4db] bg-white px-4 py-3 text-sm text-[#23362c] outline-none transition focus:border-[#2f6b52]"
+                      placeholder="mica@consulta.com"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#425248]">
+                    Contrasena
+                    <input
+                      name="password"
+                      type="password"
+                      className="mt-2 w-full rounded-[1rem] border border-[#dce4db] bg-white px-4 py-3 text-sm text-[#23362c] outline-none transition focus:border-[#2f6b52]"
+                      placeholder="Crea una contrasena segura"
+                      required
+                    />
+                  </label>
+                </div>
+                <button type="submit" className="mt-6 inline-flex w-full items-center justify-center rounded-full border border-[#2f6b52]/18 bg-white px-6 py-3 text-sm font-semibold text-[#2f6b52] transition hover:bg-[#eef6f1]">
+                  Crear cuenta
+                </button>
+              </form>
             </div>
           </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <form action={signInAction} className="zajno-card rounded-none p-7">
-            <p className="display-kicker">Ingresar</p>
-            <input type="hidden" name="next" value={next} />
-            <div className="mt-5 space-y-4">
-              <label className="block text-[11px] font-bold uppercase tracking-[0.24em] text-black/55">
-                Email
-                <input
-                  name="email"
-                  type="email"
-                  className="mt-2 w-full px-4 py-3"
-                  placeholder="nutri@consulta.com"
-                  required
-                />
-              </label>
-              <label className="block text-[11px] font-bold uppercase tracking-[0.24em] text-black/55">
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  className="mt-2 w-full px-4 py-3"
-                  placeholder="********"
-                  required
-                />
-              </label>
-            </div>
-            <button type="submit" className="z-btn mt-6 w-full">
-              Iniciar sesion
-            </button>
-          </form>
-
-          <form action={signUpAction} className="zajno-card rounded-none p-7">
-            <p className="display-kicker">Alta inicial</p>
-            <div className="mt-5 space-y-4">
-              <label className="block text-[11px] font-bold uppercase tracking-[0.24em] text-black/55">
-                Nombre completo
-                <input
-                  name="full_name"
-                  type="text"
-                  className="mt-2 w-full px-4 py-3"
-                  placeholder="Dra. Micaela"
-                  required
-                />
-              </label>
-              <label className="block text-[11px] font-bold uppercase tracking-[0.24em] text-black/55">
-                Email
-                <input
-                  name="email"
-                  type="email"
-                  className="mt-2 w-full px-4 py-3"
-                  placeholder="mica@consulta.com"
-                  required
-                />
-              </label>
-              <label className="block text-[11px] font-bold uppercase tracking-[0.24em] text-black/55">
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  className="mt-2 w-full px-4 py-3"
-                  placeholder="Minimo recomendado por Supabase"
-                  required
-                />
-              </label>
-            </div>
-            <button type="submit" className="z-btn-secondary mt-6 w-full">
-              Crear cuenta
-            </button>
-          </form>
-        </div>
-      </section>
+        </section>
 
       {message ? (
         <div
@@ -203,12 +230,11 @@ export default async function SignInPage({
       ) : null}
 
       {isConfigured ? (
-        <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/75 px-6 py-4 text-sm leading-7 text-slate-600">
-          Si al crear cuenta no puedes entrar y ves el mensaje de confirmacion,
-          el problema no es el rol. Primero debes confirmar el email en Supabase
-          Auth o desactivar la opcion <strong>Confirm email</strong> para desarrollo.
+        <div className="rounded-[1.6rem] border border-[#e6dccf] bg-white/80 px-6 py-4 text-sm leading-7 text-[#6b5640]">
+          Si acabas de crear tu cuenta, abre el correo de confirmacion y entra desde el enlace oficial de la app.
         </div>
       ) : null}
+      </div>
     </main>
   );
 }

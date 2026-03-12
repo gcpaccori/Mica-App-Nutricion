@@ -224,6 +224,99 @@ export async function addIntakeItemAction(formData: FormData) {
   redirect(`/intake/${intakeDayId}`);
 }
 
+export async function updateIntakeItemAction(formData: FormData) {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) redirect("/sign-in");
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
+
+  const itemId = str(formData, "item_id");
+  const intakeMealId = str(formData, "intake_meal_id");
+  const alimentoId = Number(str(formData, "alimento_id"));
+  const quantityGramsInput = Number(str(formData, "quantity_grams"));
+  const intakeDayId = str(formData, "intake_day_id");
+  const consumed = formData.get("consumed") !== null;
+  const foodPortionId = Number(str(formData, "food_portion_id"));
+  const portionMultiplier = Number(str(formData, "portion_multiplier")) || 1;
+  let quantityGrams = quantityGramsInput;
+  let householdMeasure = str(formData, "household_measure") || null;
+  let householdQuantity = foodPortionId ? portionMultiplier : null;
+
+  if (!itemId || !intakeMealId) {
+    redirect(`/intake/${intakeDayId}?message=${encodeURIComponent("No se identifico el alimento a editar.")}`);
+  }
+
+  if (foodPortionId) {
+    const { data: portion } = await supabase
+      .from("nutrition_food_portion")
+      .select("id, alimento_id, portion_label, net_grams")
+      .eq("id", foodPortionId)
+      .eq("alimento_id", alimentoId)
+      .single();
+
+    if (!portion) {
+      redirect(`/intake/${intakeDayId}?message=${encodeURIComponent("La porcion seleccionada ya no existe para este alimento.")}&editItem=${encodeURIComponent(itemId)}`);
+    }
+
+    quantityGrams = Number(portion.net_grams) * portionMultiplier;
+    householdMeasure = portion.portion_label;
+    householdQuantity = portionMultiplier;
+  }
+
+  if (!alimentoId || !quantityGrams || quantityGrams <= 0) {
+    redirect(`/intake/${intakeDayId}?message=${encodeURIComponent("Alimento y gramos son obligatorios.")}&editItem=${encodeURIComponent(itemId)}`);
+  }
+
+  const { error } = await supabase
+    .from("intake_meal_items")
+    .update({
+      alimento_id: alimentoId,
+      quantity_grams: quantityGrams,
+      household_measure: householdMeasure,
+      household_quantity: householdQuantity,
+      food_portion_id: foodPortionId || null,
+      portion_multiplier: foodPortionId ? portionMultiplier : 1,
+      consumed,
+    })
+    .eq("id", itemId)
+    .eq("intake_meal_id", intakeMealId);
+
+  if (error) {
+    redirect(`/intake/${intakeDayId}?message=${encodeURIComponent(error.message)}&editItem=${encodeURIComponent(itemId)}`);
+  }
+
+  redirect(`/intake/${intakeDayId}?message=${encodeURIComponent("Alimento actualizado correctamente.")}`);
+}
+
+export async function deleteIntakeItemAction(formData: FormData) {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) redirect("/sign-in");
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
+
+  const itemId = str(formData, "item_id");
+  const intakeMealId = str(formData, "intake_meal_id");
+  const intakeDayId = str(formData, "intake_day_id");
+
+  if (!itemId || !intakeMealId) {
+    redirect(`/intake/${intakeDayId}?message=${encodeURIComponent("No se identifico el alimento a eliminar.")}`);
+  }
+
+  const { error } = await supabase
+    .from("intake_meal_items")
+    .delete()
+    .eq("id", itemId)
+    .eq("intake_meal_id", intakeMealId);
+
+  if (error) {
+    redirect(`/intake/${intakeDayId}?message=${encodeURIComponent(error.message)}&editItem=${encodeURIComponent(itemId)}`);
+  }
+
+  redirect(`/intake/${intakeDayId}?message=${encodeURIComponent("Alimento eliminado.")}`);
+}
+
 export async function updateMealStatusAction(formData: FormData) {
   const supabase = await createServerSupabaseClient();
   if (!supabase) redirect("/sign-in");

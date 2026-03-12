@@ -6,12 +6,13 @@ import {
   addMealToDayAction,
   addMealItemAction,
   activatePlanAction,
+  deletePlanMealItemAction,
+  updatePlanMealItemAction,
   updatePlanMealPresentationAction,
 } from "@/lib/actions/plans";
-import { ClinicalActionNavigator } from "@/components/clinical-action-navigator";
 import type { ClinicalActionStep } from "@/components/clinical-action-navigator";
 import { CalculationSheet } from "@/components/calculation-sheet";
-import { ClinicalWorkflowPanel } from "@/components/clinical-workflow-panel";
+import { FormModalShell } from "@/components/form-modal-shell";
 import { FoodSearchSelect } from "@/components/food-search-select";
 import { getDriConditionLabel } from "@/lib/dri/condition.js";
 import { getPatientDriContext } from "@/lib/dri/server";
@@ -89,7 +90,12 @@ type MealAdequacy = {
 type MealItem = {
   id: string;
   meal_id: string;
+  alimento_id: number;
   alimento: string;
+  grupo_numero?: number | null;
+  grupo_nombre?: string | null;
+  food_portion_id?: number | null;
+  portion_multiplier?: number | null;
   saved_portion_label?: string | null;
   household_measure?: string | null;
   household_quantity?: number | null;
@@ -149,11 +155,71 @@ function targetSourceLabel(planCase: NutritionPlanCase | null, rawValue?: number
   return "DRI";
 }
 
+function buildPlanHref(
+  planId: string,
+  day?: string | number | null,
+  extra?: Record<string, string | number | null | undefined>,
+) {
+  const search = new URLSearchParams();
+
+  if (day != null && String(day) !== "") search.set("day", String(day));
+  Object.entries(extra ?? {}).forEach(([key, value]) => {
+    if (value == null || value === "") return;
+    search.set(key, String(value));
+  });
+
+  const query = search.toString();
+  return query ? `/plans/${planId}?${query}` : `/plans/${planId}`;
+}
+
+const workflowStatusClass = {
+  ready: {
+    card: "border-[#0f5c4d]/18 bg-[#eef7f3]",
+    badge: "bg-[#d6ebe3] text-[#0f5c4d]",
+    label: "Resuelto",
+  },
+  partial: {
+    card: "border-[#9a5a1f]/18 bg-[#fff8ea]",
+    badge: "bg-[#fff1cd] text-[#9a5a1f]",
+    label: "Parcial",
+  },
+  pending: {
+    card: "border-slate-200 bg-white/75",
+    badge: "bg-slate-200 text-slate-600",
+    label: "Pendiente",
+  },
+} as const;
+
+const guidedStatusClass = {
+  done: {
+    card: "border-[#0f5c4d]/18 bg-[#eef7f3]",
+    badge: "bg-[#d6ebe3] text-[#0f5c4d]",
+    action: "border-[#0f5c4d]/16 bg-white text-[#0f5c4d] hover:bg-[#f1f7f4]",
+    label: "Hecho",
+  },
+  next: {
+    card: "border-[#9a5a1f]/18 bg-[#fff8ea]",
+    badge: "bg-[#fff1cd] text-[#9a5a1f]",
+    action: "bg-[#0f5c4d] text-white hover:bg-[#0a4a3d] border-[#0f5c4d]",
+    label: "Siguiente",
+  },
+  pending: {
+    card: "border-slate-200 bg-white/75",
+    badge: "bg-slate-200 text-slate-600",
+    action: "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+    label: "Pendiente",
+  },
+} as const;
+
 export default async function PlanDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = searchParams ? await searchParams : {};
   const message = msg(sp.message);
   const selectedDay = msg(sp.day) ?? "1";
+  const modal = msg(sp.modal) ?? "";
+  const editMealId = msg(sp.editMeal) ?? null;
+  const addItemMealId = msg(sp.addItemMeal) ?? null;
+  const editItemId = msg(sp.editItem) ?? null;
 
   const supabase = await createServerSupabaseClient();
   if (!supabase) redirect("/sign-in");
@@ -507,18 +573,90 @@ export default async function PlanDetailPage({ params, searchParams }: PageProps
         </div>
       )}
 
-      <ClinicalWorkflowPanel
-        eyebrow="Capacidad del plan"
-        title="Trazabilidad del menú cuantificado"
-        intro="Esta vista deja explícito que el plan no es solo texto: cada paso del cálculo clínico queda conectado con metas, comidas, ingredientes y adecuación diaria."
-        steps={[...workflowSteps]}
-      />
+      <section className="panel rounded-[2rem] p-7 lg:p-8">
+        <p className="eyebrow">Ruta operativa del plan</p>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="headline text-2xl font-semibold text-slate-950">Trazabilidad y siguiente acción del plan</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
+              Esta sección consolida la lectura del menú cuantificado y la próxima acción operativa para que no aparezcan como bloques repetidos dentro del plan.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <span className="rounded-full border border-slate-200 bg-white/80 px-4 py-2">
+              {workflowSteps.filter((step) => step.status === "ready").length}/{workflowSteps.length} pasos resueltos
+            </span>
+            <span className="rounded-full border border-slate-200 bg-white/80 px-4 py-2">
+              {guidedSteps.filter((step) => step.status === "done").length}/{guidedSteps.length} hitos listos
+            </span>
+          </div>
+        </div>
 
-      <ClinicalActionNavigator
-        title="Siguiente acción dentro del plan"
-        intro="Esto evita que el plan quede a mitad de camino: primero metas, luego comidas, luego ingredientes, después validación y finalmente contraste con consumo real."
-        steps={guidedSteps}
-      />
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Trazabilidad del menú cuantificado</p>
+            <div className="mt-4 grid gap-4">
+              {workflowSteps.map((step) => {
+                const status = workflowStatusClass[step.status];
+
+                return (
+                  <article key={step.step} className={`rounded-[1.5rem] border p-5 ${status.card}`}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Paso {step.step}</p>
+                        <h3 className="mt-1 text-lg font-semibold text-slate-950">{step.title}</h3>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${status.badge}`}>
+                        {status.label}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{step.detail}</p>
+                    {step.evidence ? (
+                      <div className="mt-4 rounded-[1rem] border border-black/5 bg-white/70 px-4 py-3 text-xs leading-6 text-slate-500">
+                        {step.evidence}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Siguiente acción dentro del plan</p>
+            <div className="mt-4 grid gap-4">
+              {guidedSteps.map((step) => {
+                const status = guidedStatusClass[step.status];
+
+                return (
+                  <article key={step.step} className={`rounded-[1.5rem] border p-5 ${status.card}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Paso {step.step}</p>
+                        <h3 className="mt-1 text-lg font-semibold text-slate-950">{step.title}</h3>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${status.badge}`}>
+                        {status.label}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{step.description}</p>
+                    {step.evidence ? (
+                      <div className="mt-4 rounded-[1rem] border border-black/5 bg-white/70 px-4 py-3 text-xs leading-6 text-slate-500">
+                        {step.evidence}
+                      </div>
+                    ) : null}
+                    <div className="mt-5">
+                      <Link href={step.href} className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold transition ${status.action}`}>
+                        {step.actionLabel}
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <CalculationSheet
         eyebrow="Hoja visible"
@@ -627,9 +765,26 @@ export default async function PlanDetailPage({ params, searchParams }: PageProps
       {currentDay && (
         <div className="panel rounded-[2rem] p-6">
           <p className="eyebrow">Agregar comida al {currentDay.label ?? `Dia ${currentDay.day_number}`}</p>
-          <form action={addMealToDayAction} className="mt-4 grid gap-3 md:grid-cols-[auto_1fr_1.3fr_auto] md:items-end">
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href={buildPlanHref(id, selectedDay, { modal: "create-meal" })} className={btnPrimary}>
+              + Comida
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {currentDay && modal === "create-meal" ? (
+        <FormModalShell
+          title={`Agregar comida al ${currentDay.label ?? `Dia ${currentDay.day_number}`}`}
+          eyebrow="Plan del día"
+          description="Crea una nueva comida y luego completa su texto o sus alimentos desde modales separados."
+          closeHref={buildPlanHref(id, selectedDay)}
+          widthClassName="max-w-4xl"
+        >
+          <form action={addMealToDayAction} className="grid gap-3 md:grid-cols-[auto_1fr_1.3fr_auto] md:items-end">
             <input type="hidden" name="plan_day_id" value={currentDay.id} />
             <input type="hidden" name="plan_id" value={id} />
+            <input type="hidden" name="day" value={selectedDay} />
             <select name="meal_type_id" className={inputClass} required>
               {mealTypeRows.map((mealType) => (
                 <option key={mealType.id} value={mealType.id}>{mealType.name}</option>
@@ -643,10 +798,10 @@ export default async function PlanDetailPage({ params, searchParams }: PageProps
               Menú textual
               <input name="menu_text" className={inputClass} placeholder="Ej: avena cocida, fruta, yogur" />
             </label>
-            <button type="submit" className={btnPrimary}>+ Comida</button>
+            <button type="submit" className={btnPrimary}>Guardar comida</button>
           </form>
-        </div>
-      )}
+        </FormModalShell>
+      ) : null}
 
       {meals.map((meal) => {
         const items = mealItemsMap[meal.meal_id] ?? [];
@@ -657,6 +812,9 @@ export default async function PlanDetailPage({ params, searchParams }: PageProps
         const mealCarbs = Number(meal.actual_carbs_g ?? 0);
         const mealFiber = Number(meal.actual_fiber_g ?? 0);
         const mealDeviation = meal.meal_deviation_kcal != null ? Number(meal.meal_deviation_kcal) : null;
+        const editingMeal = editMealId === meal.meal_id;
+        const addingItem = addItemMealId === meal.meal_id;
+        const editingItem = items.find((item) => item.id === editItemId) ?? null;
 
         return (
           <div key={meal.meal_id} className="panel rounded-[2rem] p-7">
@@ -684,24 +842,43 @@ export default async function PlanDetailPage({ params, searchParams }: PageProps
               </div>
             </div>
 
-            <form action={updatePlanMealPresentationAction} className="mt-4 grid gap-3 border-t border-slate-200 pt-4 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
-              <input type="hidden" name="meal_id" value={meal.meal_id} />
-              <input type="hidden" name="plan_id" value={id} />
-              <label className="text-sm font-medium text-slate-700">
-                Nombre visible
-                <input name="visible_name" className={inputClass} defaultValue={meal.visible_name ?? ""} placeholder={meal.meal_type_name} />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Menú textual
-                <input name="menu_text" className={inputClass} defaultValue={meal.menu_text ?? ""} placeholder="Describe la comida en lenguaje clínico" />
-              </label>
-              <button type="submit" className="rounded-full border border-[#0f5c4d]/20 bg-white px-4 py-2 text-sm font-semibold text-[#0f5c4d] hover:bg-[#f1f7f4]">
-                Guardar texto
-              </button>
-            </form>
+            <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-200 pt-4">
+              <Link href={buildPlanHref(id, selectedDay, { editMeal: meal.meal_id })} className="rounded-full border border-[#0f5c4d]/20 bg-white px-4 py-2 text-sm font-semibold text-[#0f5c4d] hover:bg-[#f1f7f4]">
+                Editar comida
+              </Link>
+              <Link href={buildPlanHref(id, selectedDay, { addItemMeal: meal.meal_id })} className="rounded-full border border-[#0f5c4d]/20 bg-white px-4 py-2 text-sm font-semibold text-[#0f5c4d] hover:bg-[#f1f7f4]">
+                Agregar alimento
+              </Link>
+            </div>
 
             {items.length > 0 && (
-              <div className="mt-4 overflow-x-auto">
+              <>
+              <div className="mt-4 grid gap-3 md:hidden">
+                {items.map((item) => (
+                  <article key={item.id} className="rounded-[1.15rem] border border-slate-200 bg-white/80 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-950">{item.alimento}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.saved_portion_label ?? item.household_measure ?? "—"}
+                          {item.household_quantity ? ` × ${Number(item.household_quantity).toFixed(Number(item.household_quantity) % 1 === 0 ? 0 : 2)}` : ""}
+                        </p>
+                      </div>
+                      <Link href={buildPlanHref(id, selectedDay, { editItem: item.id })} className="rounded-full border border-[#0f5c4d]/15 bg-[#d6ebe3] px-3 py-1.5 text-xs font-semibold text-[#0f5c4d]">
+                        Editar
+                      </Link>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Gramos: {Number(item.quantity_grams ?? 0).toFixed(0)}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Kcal: {Number(item.energy_kcal ?? 0).toFixed(0)}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Prot: {Number(item.protein_g ?? 0).toFixed(1)}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2">Grasa: {Number(item.fat_g ?? 0).toFixed(1)}</div>
+                      <div className="rounded-[0.9rem] bg-slate-50 px-3 py-2 col-span-2">Carbos: {Number(item.carbs_g ?? 0).toFixed(1)}</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -712,6 +889,7 @@ export default async function PlanDetailPage({ params, searchParams }: PageProps
                       <th className="pb-2 pr-3 text-right">Prot</th>
                       <th className="pb-2 pr-3 text-right">Grasa</th>
                       <th className="pb-2 text-right">Carbos</th>
+                      <th className="pb-2 pl-3 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -727,21 +905,106 @@ export default async function PlanDetailPage({ params, searchParams }: PageProps
                         <td className="py-2 pr-3 text-right tabular-nums">{Number(item.protein_g ?? 0).toFixed(1)}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{Number(item.fat_g ?? 0).toFixed(1)}</td>
                         <td className="py-2 text-right tabular-nums">{Number(item.carbs_g ?? 0).toFixed(1)}</td>
+                        <td className="py-2 pl-3 text-right">
+                          <Link href={buildPlanHref(id, selectedDay, { editItem: item.id })} className="text-xs font-semibold text-[#0f5c4d] hover:underline">
+                            Editar
+                          </Link>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              </>
             )}
 
-            <form action={addMealItemAction} className="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-200 pt-4">
-              <input type="hidden" name="meal_id" value={meal.meal_id} />
-              <input type="hidden" name="plan_id" value={id} />
-              <FoodSearchSelect name="alimento_id" quantityName="quantity_grams" dailyTargets={effectiveDailyTargets} referenceTargets={effectiveReferenceTargets} required />
-              <button type="submit" className="rounded-full bg-[#0f5c4d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0a4a3d]">
-                + Agregar
-              </button>
-            </form>
+            {editingMeal ? (
+              <FormModalShell
+                title={`Editar comida: ${mealName}`}
+                eyebrow="Plan del día"
+                description="Ajusta el nombre visible y el menú textual de esta comida sin perder el contexto del día."
+                closeHref={buildPlanHref(id, selectedDay)}
+                widthClassName="max-w-4xl"
+              >
+                <form action={updatePlanMealPresentationAction} className="grid gap-3 md:grid-cols-[1fr_1.5fr_auto] md:items-end">
+                  <input type="hidden" name="meal_id" value={meal.meal_id} />
+                  <input type="hidden" name="plan_id" value={id} />
+                  <input type="hidden" name="day" value={selectedDay} />
+                  <label className="text-sm font-medium text-slate-700">
+                    Nombre visible
+                    <input name="visible_name" className={inputClass} defaultValue={meal.visible_name ?? ""} placeholder={meal.meal_type_name} />
+                  </label>
+                  <label className="text-sm font-medium text-slate-700">
+                    Menú textual
+                    <input name="menu_text" className={inputClass} defaultValue={meal.menu_text ?? ""} placeholder="Describe la comida en lenguaje clínico" />
+                  </label>
+                  <button type="submit" className={btnPrimary}>Guardar comida</button>
+                </form>
+              </FormModalShell>
+            ) : null}
+
+            {addingItem ? (
+              <FormModalShell
+                title={`Agregar alimento a ${mealName}`}
+                eyebrow="Ingredientes"
+                description="Busca el alimento, elige una porción guardada o gramos manuales y agrégalo al subtotal de la comida."
+                closeHref={buildPlanHref(id, selectedDay)}
+                widthClassName="max-w-5xl"
+              >
+                <form action={addMealItemAction} className="space-y-4">
+                  <input type="hidden" name="meal_id" value={meal.meal_id} />
+                  <input type="hidden" name="plan_id" value={id} />
+                  <input type="hidden" name="day" value={selectedDay} />
+                  <FoodSearchSelect name="alimento_id" quantityName="quantity_grams" dailyTargets={effectiveDailyTargets} referenceTargets={effectiveReferenceTargets} required />
+                  <button type="submit" className={btnPrimary}>Agregar alimento</button>
+                </form>
+              </FormModalShell>
+            ) : null}
+
+            {editingItem ? (
+              <FormModalShell
+                title={`Editar alimento en ${mealName}`}
+                eyebrow="Ingredientes"
+                description="Ajusta alimento, porción o gramos sin salir del plan del día."
+                closeHref={buildPlanHref(id, selectedDay)}
+                widthClassName="max-w-5xl"
+              >
+                <form action={updatePlanMealItemAction} className="space-y-4">
+                  <input type="hidden" name="item_id" value={editingItem.id} />
+                  <input type="hidden" name="meal_id" value={meal.meal_id} />
+                  <input type="hidden" name="plan_id" value={id} />
+                  <input type="hidden" name="day" value={selectedDay} />
+                  <FoodSearchSelect
+                    name="alimento_id"
+                    quantityName="quantity_grams"
+                    dailyTargets={effectiveDailyTargets}
+                    referenceTargets={effectiveReferenceTargets}
+                    required
+                    initialFoodId={editingItem.alimento_id}
+                    initialFoodLabel={editingItem.alimento}
+                    initialQuantityGrams={Number(editingItem.quantity_grams ?? 100)}
+                    initialPortionId={editingItem.food_portion_id ?? null}
+                    initialPortionMultiplier={editingItem.portion_multiplier ?? null}
+                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button type="submit" className={btnPrimary}>Guardar cambios</button>
+                    <Link href={buildPlanHref(id, selectedDay)} className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300">
+                      Cancelar
+                    </Link>
+                  </div>
+                </form>
+
+                <form action={deletePlanMealItemAction} className="mt-4 border-t border-slate-200 pt-4">
+                  <input type="hidden" name="item_id" value={editingItem.id} />
+                  <input type="hidden" name="meal_id" value={meal.meal_id} />
+                  <input type="hidden" name="plan_id" value={id} />
+                  <input type="hidden" name="day" value={selectedDay} />
+                  <button type="submit" className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100">
+                    Eliminar alimento
+                  </button>
+                </form>
+              </FormModalShell>
+            ) : null}
           </div>
         );
       })}

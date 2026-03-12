@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { FormModalShell } from "@/components/form-modal-shell";
 import {
   createPatientAction,
   deletePatientAction,
@@ -41,6 +42,7 @@ export default async function PatientsPage({
   const params = searchParams ? await searchParams : undefined;
   const message = getMessage(params?.message);
   const editId = getMessage(params?.edit);
+  const mode = getMessage(params?.mode);
 
   if (!hasSupabaseEnv()) {
     return (
@@ -98,11 +100,13 @@ export default async function PatientsPage({
 
   const canCreate = roles.includes("admin") || roles.includes("nutritionist") || !roles.length;
   const patientFormAction = selectedPatient ? updatePatientAction : createPatientAction;
+  const showPatientModal = Boolean(selectedPatient) || mode === "create";
+  const closePatientModalHref = "/patients";
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10 lg:px-10 lg:py-14">
-      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="panel-strong rounded-[2rem] p-8 lg:p-10">
+      <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-start">
+        <div className="panel-strong self-start rounded-[2rem] p-8 lg:p-10">
           <p className="eyebrow">Ficha clinica</p>
           <h1 className="headline mt-4 text-4xl leading-tight text-slate-950 md:text-5xl">
             Pacientes de {profile?.full_name ?? user.email ?? "la consulta"}
@@ -119,7 +123,7 @@ export default async function PatientsPage({
           ) : null}
         </div>
 
-        <div className="panel rounded-[2rem] p-8">
+        <div className="panel self-start rounded-[2rem] p-8">
           <p className="eyebrow">Roles detectados</p>
           <div className="mt-5 flex flex-wrap gap-3">
             {roles.length ? (
@@ -140,107 +144,27 @@ export default async function PatientsPage({
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="panel rounded-[2rem] p-8">
+      <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr] xl:items-start">
+        <div className="panel self-start rounded-[2rem] p-8">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="eyebrow">{selectedPatient ? "Editar paciente" : "Alta rapida"}</p>
+              <p className="eyebrow">Acciones de ficha</p>
               <p className="mt-2 text-sm text-slate-500">
-                {selectedPatient
-                  ? "Actualiza la ficha base o elimina el paciente si corresponde."
-                  : "Crea la ficha clínica base con identificación, contexto y notas iniciales."}
+                Crear y editar la ficha base ahora salen como modales responsivos para acelerar el flujo sin dejar formularios gigantes siempre visibles.
               </p>
             </div>
-            {selectedPatient ? (
-              <Link href="/patients" className="text-sm font-semibold text-[#0f5c4d] hover:underline">
-                Limpiar
-              </Link>
-            ) : null}
           </div>
           {canCreate ? (
-            <>
-            {selectedPatient ? (
-              <div className="mt-5 rounded-[1.25rem] bg-[#f1f7f4] px-4 py-3 text-sm text-slate-700">
-                Editando a {selectedPatient.first_name} {selectedPatient.last_name}
-              </div>
-            ) : null}
-            <form action={patientFormAction} className="mt-5 grid gap-4 md:grid-cols-2">
-              {selectedPatient ? <input type="hidden" name="id" value={selectedPatient.id} /> : null}
-              <label className="text-sm font-medium text-slate-700">
-                Nombre
-                <input name="first_name" defaultValue={selectedPatient?.first_name ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" required />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Apellido
-                <input name="last_name" defaultValue={selectedPatient?.last_name ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" required />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Fecha de nacimiento
-                <input name="birth_date" type="date" defaultValue={selectedPatient?.birth_date ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" required />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Sexo
-                <select name="sex" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" defaultValue={selectedPatient?.sex ?? "female"}>
-                  <option value="female">female</option>
-                  <option value="male">male</option>
-                  <option value="other">other</option>
-                </select>
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Actividad fisica
-                <select name="activity_level" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" defaultValue={selectedPatient?.activity_level ?? "sedentary"}>
-                  <option value="sedentary">sedentary</option>
-                  <option value="light">light</option>
-                  <option value="moderate">moderate</option>
-                  <option value="high">high</option>
-                  <option value="very_high">very_high</option>
-                </select>
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Documento
-                <input name="document_number" defaultValue={selectedPatient?.document_number ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Telefono
-                <input name="phone" defaultValue={selectedPatient?.phone ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Email
-                <input name="email" type="email" defaultValue={selectedPatient?.email ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <label className="md:col-span-2 text-sm font-medium text-slate-700">
-                Ocupacion
-                <input name="occupation" defaultValue={selectedPatient?.occupation ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <label className="md:col-span-2 text-sm font-medium text-slate-700">
-                Alergias
-                <textarea name="allergies" rows={3} defaultValue={selectedPatient?.allergies ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <label className="md:col-span-2 text-sm font-medium text-slate-700">
-                Intolerancias
-                <textarea name="intolerances" rows={3} defaultValue={selectedPatient?.intolerances ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <label className="md:col-span-2 text-sm font-medium text-slate-700">
-                Notas medicas
-                <textarea name="medical_notes" rows={4} defaultValue={selectedPatient?.medical_notes ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <label className="md:col-span-2 text-sm font-medium text-slate-700">
-                Notas de estilo de vida
-                <textarea name="lifestyle_notes" rows={4} defaultValue={selectedPatient?.lifestyle_notes ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
-              </label>
-              <button type="submit" className="md:col-span-2 rounded-full bg-[#0f5c4d] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4a3d]">
-                {selectedPatient ? "Guardar cambios" : "Guardar paciente"}
-              </button>
-            </form>
-            {selectedPatient ? (
-              <form action={deletePatientAction} className="mt-4 border-t border-slate-200 pt-4">
-                <input type="hidden" name="id" value={selectedPatient.id} />
-                <button type="submit" className="rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100">
-                  Eliminar paciente
-                </button>
-              </form>
-            ) : null}
-            </>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href="/patients?mode=create" className="rounded-full bg-[#0f5c4d] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4a3d]">
+                Nuevo paciente
+              </Link>
+              {selectedPatient ? (
+                <span className="rounded-[1rem] bg-[#f1f7f4] px-4 py-3 text-sm text-slate-700">
+                  Editando a {selectedPatient.first_name} {selectedPatient.last_name}
+                </span>
+              ) : null}
+            </div>
           ) : (
             <div className="mt-5 rounded-[1.5rem] bg-[#fff3db] p-4 text-sm text-[#9a5a1f]">
               Tu rol actual no permite crear pacientes.
@@ -248,7 +172,7 @@ export default async function PatientsPage({
           )}
         </div>
 
-        <div className="panel rounded-[2rem] p-8">
+        <div className="panel self-start rounded-[2rem] p-8">
           <p className="eyebrow">Listado actual</p>
           <div className="mt-5 space-y-4">
             {error ? (
@@ -290,6 +214,102 @@ export default async function PatientsPage({
           </div>
         </div>
       </section>
+
+      {showPatientModal && canCreate ? (
+        <FormModalShell
+          title={selectedPatient ? "Editar paciente" : "Nuevo paciente"}
+          eyebrow="Ficha clínica"
+          description={selectedPatient
+            ? "Actualiza la ficha base o elimina el paciente si corresponde."
+            : "Crea la ficha clínica base con identificación, contexto y notas iniciales."}
+          closeHref={closePatientModalHref}
+          widthClassName="max-w-6xl"
+        >
+          {selectedPatient ? (
+            <div className="mb-5 rounded-[1.25rem] bg-[#f1f7f4] px-4 py-3 text-sm text-slate-700">
+              Editando a {selectedPatient.first_name} {selectedPatient.last_name}
+            </div>
+          ) : null}
+
+          <form action={patientFormAction} className="grid gap-4 md:grid-cols-2">
+            {selectedPatient ? <input type="hidden" name="id" value={selectedPatient.id} /> : null}
+            <label className="text-sm font-medium text-slate-700">
+              Nombre
+              <input name="first_name" defaultValue={selectedPatient?.first_name ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" required />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Apellido
+              <input name="last_name" defaultValue={selectedPatient?.last_name ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" required />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Fecha de nacimiento
+              <input name="birth_date" type="date" defaultValue={selectedPatient?.birth_date ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" required />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Sexo
+              <select name="sex" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" defaultValue={selectedPatient?.sex ?? "female"}>
+                <option value="female">female</option>
+                <option value="male">male</option>
+                <option value="other">other</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Actividad fisica
+              <select name="activity_level" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" defaultValue={selectedPatient?.activity_level ?? "sedentary"}>
+                <option value="sedentary">sedentary</option>
+                <option value="light">light</option>
+                <option value="moderate">moderate</option>
+                <option value="high">high</option>
+                <option value="very_high">very_high</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Documento
+              <input name="document_number" defaultValue={selectedPatient?.document_number ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Telefono
+              <input name="phone" defaultValue={selectedPatient?.phone ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Email
+              <input name="email" type="email" defaultValue={selectedPatient?.email ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <label className="md:col-span-2 text-sm font-medium text-slate-700">
+              Ocupacion
+              <input name="occupation" defaultValue={selectedPatient?.occupation ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <label className="md:col-span-2 text-sm font-medium text-slate-700">
+              Alergias
+              <textarea name="allergies" rows={3} defaultValue={selectedPatient?.allergies ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <label className="md:col-span-2 text-sm font-medium text-slate-700">
+              Intolerancias
+              <textarea name="intolerances" rows={3} defaultValue={selectedPatient?.intolerances ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <label className="md:col-span-2 text-sm font-medium text-slate-700">
+              Notas medicas
+              <textarea name="medical_notes" rows={4} defaultValue={selectedPatient?.medical_notes ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <label className="md:col-span-2 text-sm font-medium text-slate-700">
+              Notas de estilo de vida
+              <textarea name="lifestyle_notes" rows={4} defaultValue={selectedPatient?.lifestyle_notes ?? ""} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 focus:border-[#0f5c4d] focus:outline-none" />
+            </label>
+            <button type="submit" className="md:col-span-2 rounded-full bg-[#0f5c4d] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4a3d]">
+              {selectedPatient ? "Guardar cambios" : "Guardar paciente"}
+            </button>
+          </form>
+
+          {selectedPatient ? (
+            <form action={deletePatientAction} className="mt-4 border-t border-slate-200 pt-4">
+              <input type="hidden" name="id" value={selectedPatient.id} />
+              <button type="submit" className="rounded-full border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100">
+                Eliminar paciente
+              </button>
+            </form>
+          ) : null}
+        </FormModalShell>
+      ) : null}
     </main>
   );
 }

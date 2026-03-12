@@ -37,6 +37,20 @@ function str(fd: FormData, k: string) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function planDetailRedirect(planId: string, day?: string, message?: string, extra?: string) {
+  const search = new URLSearchParams();
+
+  if (day) search.set("day", day);
+  if (message) search.set("message", message);
+  if (extra) {
+    const extraParams = new URLSearchParams(extra);
+    extraParams.forEach((value, key) => search.set(key, value));
+  }
+
+  const query = search.toString();
+  return query ? `/plans/${planId}?${query}` : `/plans/${planId}`;
+}
+
 export async function createDietPlanAction(formData: FormData) {
   const supabase = await createServerSupabaseClient();
   if (!supabase) redirect("/sign-in");
@@ -151,6 +165,7 @@ export async function addMealToDayAction(formData: FormData) {
   const planDayId = str(formData, "plan_day_id");
   const mealTypeId = Number(str(formData, "meal_type_id"));
   const planId = str(formData, "plan_id");
+  const day = str(formData, "day");
   const visibleNameInput = str(formData, "visible_name");
   const menuTextInput = str(formData, "menu_text");
 
@@ -210,10 +225,10 @@ export async function addMealToDayAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/plans/${planId}?message=${encodeURIComponent(error.message)}`);
+    redirect(planDetailRedirect(planId, day, error.message));
   }
 
-  redirect(`/plans/${planId}`);
+  redirect(planDetailRedirect(planId, day));
 }
 
 export async function updatePlanMealPresentationAction(formData: FormData) {
@@ -225,6 +240,7 @@ export async function updatePlanMealPresentationAction(formData: FormData) {
 
   const mealId = str(formData, "meal_id");
   const planId = str(formData, "plan_id");
+  const day = str(formData, "day");
   const visibleName = str(formData, "visible_name");
   const menuText = str(formData, "menu_text");
 
@@ -237,10 +253,10 @@ export async function updatePlanMealPresentationAction(formData: FormData) {
     .eq("id", mealId);
 
   if (error) {
-    redirect(`/plans/${planId}?message=${encodeURIComponent(error.message)}`);
+    redirect(planDetailRedirect(planId, day, error.message));
   }
 
-  redirect(`/plans/${planId}?message=${encodeURIComponent("Presentacion de la comida actualizada.")}`);
+  redirect(planDetailRedirect(planId, day, "Presentacion de la comida actualizada."));
 }
 
 export async function addMealItemAction(formData: FormData) {
@@ -254,6 +270,7 @@ export async function addMealItemAction(formData: FormData) {
   const alimentoId = Number(str(formData, "alimento_id"));
   const quantityGramsInput = Number(str(formData, "quantity_grams"));
   const planId = str(formData, "plan_id");
+  const day = str(formData, "day");
   const foodPortionId = Number(str(formData, "food_portion_id"));
   const portionMultiplier = Number(str(formData, "portion_multiplier")) || 1;
   let quantityGrams = quantityGramsInput;
@@ -269,7 +286,7 @@ export async function addMealItemAction(formData: FormData) {
       .single();
 
     if (!portion) {
-      redirect(`/plans/${planId}?message=${encodeURIComponent("La porcion seleccionada ya no existe para este alimento.")}`);
+      redirect(planDetailRedirect(planId, day, "La porcion seleccionada ya no existe para este alimento."));
     }
 
     quantityGrams = Number(portion.net_grams) * portionMultiplier;
@@ -278,7 +295,7 @@ export async function addMealItemAction(formData: FormData) {
   }
 
   if (!alimentoId || !quantityGrams || quantityGrams <= 0) {
-    redirect(`/plans/${planId}?message=${encodeURIComponent("Alimento y gramos son obligatorios.")}`);
+    redirect(planDetailRedirect(planId, day, "Alimento y gramos son obligatorios."));
   }
 
   const { error } = await supabase.from("diet_meal_items").insert({
@@ -292,8 +309,101 @@ export async function addMealItemAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/plans/${planId}?message=${encodeURIComponent(error.message)}`);
+    redirect(planDetailRedirect(planId, day, error.message));
   }
 
-  redirect(`/plans/${planId}`);
+  redirect(planDetailRedirect(planId, day));
+}
+
+export async function updatePlanMealItemAction(formData: FormData) {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) redirect("/sign-in");
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
+
+  const itemId = str(formData, "item_id");
+  const mealId = str(formData, "meal_id");
+  const alimentoId = Number(str(formData, "alimento_id"));
+  const quantityGramsInput = Number(str(formData, "quantity_grams"));
+  const planId = str(formData, "plan_id");
+  const day = str(formData, "day");
+  const foodPortionId = Number(str(formData, "food_portion_id"));
+  const portionMultiplier = Number(str(formData, "portion_multiplier")) || 1;
+  let quantityGrams = quantityGramsInput;
+  let householdMeasure = str(formData, "household_measure") || null;
+  let householdQuantity = foodPortionId ? portionMultiplier : null;
+
+  if (!itemId || !mealId) {
+    redirect(planDetailRedirect(planId, day, "No se identifico el alimento a editar."));
+  }
+
+  if (foodPortionId) {
+    const { data: portion } = await supabase
+      .from("nutrition_food_portion")
+      .select("id, alimento_id, portion_label, net_grams")
+      .eq("id", foodPortionId)
+      .eq("alimento_id", alimentoId)
+      .single();
+
+    if (!portion) {
+      redirect(planDetailRedirect(planId, day, "La porcion seleccionada ya no existe para este alimento.", `editItem=${itemId}`));
+    }
+
+    quantityGrams = Number(portion.net_grams) * portionMultiplier;
+    householdMeasure = portion.portion_label;
+    householdQuantity = portionMultiplier;
+  }
+
+  if (!alimentoId || !quantityGrams || quantityGrams <= 0) {
+    redirect(planDetailRedirect(planId, day, "Alimento y gramos son obligatorios.", `editItem=${itemId}`));
+  }
+
+  const { error } = await supabase
+    .from("diet_meal_items")
+    .update({
+      alimento_id: alimentoId,
+      quantity_grams: quantityGrams,
+      household_measure: householdMeasure,
+      household_quantity: householdQuantity,
+      food_portion_id: foodPortionId || null,
+      portion_multiplier: foodPortionId ? portionMultiplier : 1,
+    })
+    .eq("id", itemId)
+    .eq("meal_id", mealId);
+
+  if (error) {
+    redirect(planDetailRedirect(planId, day, error.message, `editItem=${itemId}`));
+  }
+
+  redirect(planDetailRedirect(planId, day, "Alimento actualizado correctamente."));
+}
+
+export async function deletePlanMealItemAction(formData: FormData) {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) redirect("/sign-in");
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
+
+  const itemId = str(formData, "item_id");
+  const mealId = str(formData, "meal_id");
+  const planId = str(formData, "plan_id");
+  const day = str(formData, "day");
+
+  if (!itemId || !mealId) {
+    redirect(planDetailRedirect(planId, day, "No se identifico el alimento a eliminar."));
+  }
+
+  const { error } = await supabase
+    .from("diet_meal_items")
+    .delete()
+    .eq("id", itemId)
+    .eq("meal_id", mealId);
+
+  if (error) {
+    redirect(planDetailRedirect(planId, day, error.message, `editItem=${itemId}`));
+  }
+
+  redirect(planDetailRedirect(planId, day, "Alimento eliminado."));
 }

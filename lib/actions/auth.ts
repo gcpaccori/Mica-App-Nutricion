@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { buildPublicAppUrl } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function getStringValue(formData: FormData, key: string) {
@@ -49,6 +50,7 @@ export async function signUpAction(formData: FormData) {
     email,
     password,
     options: {
+      emailRedirectTo: buildPublicAppUrl("/auth/confirm?next=/dashboard"),
       data: {
         full_name: fullName,
       },
@@ -61,7 +63,7 @@ export async function signUpAction(formData: FormData) {
 
   const message = data.session
     ? "Cuenta creada e iniciada correctamente."
-    : "Cuenta creada. Revisa tu email y confirma la cuenta antes de iniciar sesion, o desactiva Confirm email en Supabase Auth para desarrollo.";
+    : "Cuenta creada. Revisa tu correo y confirma tu acceso desde el enlace oficial de la app.";
 
   redirect(`/sign-in?message=${encodeURIComponent(message)}`);
 }

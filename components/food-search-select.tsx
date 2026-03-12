@@ -28,6 +28,11 @@ type FoodSearchSelectProps = {
   householdMeasureName?: string;
   householdQuantityName?: string;
   defaultQuantityGrams?: number;
+  initialFoodId?: number | null;
+  initialFoodLabel?: string | null;
+  initialQuantityGrams?: number | null;
+  initialPortionId?: number | null;
+  initialPortionMultiplier?: number | null;
   dailyTargets?: Partial<Record<TargetFieldKey, number | null>>;
   referenceTargets?: Partial<Record<string, { value: number; unit?: string | null; label?: string; valueType?: string; lifeStageLabel?: string | null }>>;
 };
@@ -173,23 +178,44 @@ export function FoodSearchSelect({
   householdMeasureName = "household_measure",
   householdQuantityName = "household_quantity",
   defaultQuantityGrams = 100,
+  initialFoodId = null,
+  initialFoodLabel = null,
+  initialQuantityGrams = null,
+  initialPortionId = null,
+  initialPortionMultiplier = null,
   dailyTargets,
   referenceTargets,
 }: FoodSearchSelectProps) {
   const inputId = useId();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialFoodLabel ?? "");
   const [results, setResults] = useState<FoodRecord[]>([]);
   const [portions, setPortions] = useState<FoodPortionRecord[]>([]);
   const [selectedFood, setSelectedFood] = useState<FoodRecord | null>(null);
-  const [selectedId, setSelectedId] = useState("");
-  const [selectedPortionId, setSelectedPortionId] = useState("");
-  const [portionMultiplier, setPortionMultiplier] = useState("1");
-  const [quantityGrams, setQuantityGrams] = useState(String(defaultQuantityGrams));
+  const [selectedId, setSelectedId] = useState(initialFoodId != null ? String(initialFoodId) : "");
+  const [selectedPortionId, setSelectedPortionId] = useState(initialPortionId != null ? String(initialPortionId) : "");
+  const [portionMultiplier, setPortionMultiplier] = useState(
+    initialPortionMultiplier != null && initialPortionMultiplier > 0 ? formatInputNumber(initialPortionMultiplier) : "1",
+  );
+  const [quantityGrams, setQuantityGrams] = useState(
+    initialQuantityGrams != null && initialQuantityGrams > 0 ? formatInputNumber(initialQuantityGrams) : String(defaultQuantityGrams),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [portionError, setPortionError] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query.trim());
+
+  useEffect(() => {
+    if (!selectedId || selectedFood) return;
+
+    const hydratedFood = results.find((food) => String(food.id) === selectedId) ?? null;
+    if (hydratedFood) {
+      setSelectedFood(hydratedFood);
+      if (!query) {
+        setQuery(hydratedFood.alimento);
+      }
+    }
+  }, [query, results, selectedFood, selectedId]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -268,9 +294,24 @@ export function FoodSearchSelect({
 
         const payload = (await response.json()) as { portions?: FoodPortionRecord[] };
         if (!isCancelled) {
-          setPortions(payload.portions ?? []);
-          setSelectedPortionId("");
-          setPortionMultiplier("1");
+          const nextPortions = payload.portions ?? [];
+          const initialPortionKey = initialPortionId != null ? String(initialPortionId) : "";
+
+          setPortions(nextPortions);
+          setSelectedPortionId((prev) => {
+            if (prev && nextPortions.some((portion) => String(portion.id) === prev)) return prev;
+            if (initialPortionKey && nextPortions.some((portion) => String(portion.id) === initialPortionKey)) return initialPortionKey;
+            return "";
+          });
+          setPortionMultiplier((prev) => {
+            if (prev && prev !== "1") return prev;
+            if (initialPortionKey && nextPortions.some((portion) => String(portion.id) === initialPortionKey)) {
+              return initialPortionMultiplier != null && initialPortionMultiplier > 0
+                ? formatInputNumber(initialPortionMultiplier)
+                : "1";
+            }
+            return "1";
+          });
         }
       } catch (err) {
         if (!isCancelled) {
@@ -287,7 +328,7 @@ export function FoodSearchSelect({
     return () => {
       isCancelled = true;
     };
-  }, [selectedId]);
+  }, [initialPortionId, initialPortionMultiplier, selectedId]);
 
   const selectedPortion = useMemo(
     () => portions.find((portion) => String(portion.id) === selectedPortionId) ?? null,
@@ -396,6 +437,7 @@ export function FoodSearchSelect({
               if (selectedFood && nextValue !== selectedFood.alimento) {
                 setSelectedFood(null);
                 setSelectedId("");
+                setSelectedPortionId("");
               }
             }}
             onFocus={() => setIsOpen(true)}
@@ -442,6 +484,8 @@ export function FoodSearchSelect({
                       setSelectedId(String(food.id));
                       setQuery(food.alimento);
                       setQuantityGrams(String(defaultQuantityGrams));
+                      setSelectedPortionId("");
+                      setPortionMultiplier("1");
                       setIsOpen(false);
                     }}
                     className={`w-full rounded-2xl px-3 py-2 text-left transition ${
@@ -584,7 +628,25 @@ export function FoodSearchSelect({
             ))}
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-slate-200 bg-white">
+          <div className="mt-4 grid gap-3 md:hidden">
+            {nutrientEntries.map((entry) => (
+              <div key={entry.key} className="rounded-[1rem] border border-slate-200 bg-white px-3 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-800">{entry.label}</p>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    {entry.unit || "sin unidad"}
+                  </span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                  <div className="rounded-[0.8rem] bg-slate-50 px-3 py-2">100 g: {formatMetric(coerceNumber(entry.rawValue), entry.unit)}</div>
+                  <div className="rounded-[0.8rem] bg-slate-50 px-3 py-2">Porción: {formatMetric(entry.scaledValue, entry.unit)}</div>
+                  <div className="rounded-[0.8rem] bg-slate-50 px-3 py-2 col-span-2">Referencia: {entry.percentage != null ? `${formatValue(entry.percentage, 0)}%` : "—"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 hidden overflow-hidden rounded-[1.25rem] border border-slate-200 bg-white md:block">
             <div className="max-h-[420px] overflow-auto">
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-slate-50 text-slate-500">

@@ -228,6 +228,34 @@ a {
   color: #f0efeb;
 }
 
+.app-nav-link {
+  color: rgba(10, 10, 10, 0.7);
+}
+
+.app-nav-link:hover,
+.app-nav-link:focus-visible {
+  border-color: #0a0a0a;
+  background: #0a0a0a;
+  color: #f0efeb !important;
+  outline: none;
+}
+
+.app-mobile-menu > summary {
+  list-style: none;
+}
+
+.app-mobile-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-mobile-scroller {
+  scrollbar-width: none;
+}
+
+.app-mobile-scroller::-webkit-scrollbar {
+  display: none;
+}
+
 .z-field,
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
 select,
