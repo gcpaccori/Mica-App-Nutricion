@@ -30,8 +30,19 @@ export function AppHeaderClient({
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    const collapseOffset = 40;
+    const expandOffset = 4;
+
     const onScroll = () => {
-      setScrolled(window.scrollY > 16);
+      const nextScrollY = window.scrollY;
+
+      setScrolled((current) => {
+        if (current) {
+          return nextScrollY > expandOffset;
+        }
+
+        return nextScrollY > collapseOffset;
+      });
     };
 
     onScroll();

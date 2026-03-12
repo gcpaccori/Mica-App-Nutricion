@@ -55,7 +55,6 @@ export default async function FoodCatalogPage({
   const page = Math.max(1, Number(msg(sp.page)) || 1);
   const editId = Number(msg(sp.edit)) || null;
   const mode = msg(sp.mode) ?? "";
-  const message = msg(sp.message);
   const pageSize = 30;
 
   const supabase = await createServerSupabaseClient();
@@ -116,13 +115,6 @@ export default async function FoodCatalogPage({
           Aquí puedes crear, editar y eliminar alimentos del catálogo, y revisar todas las columnas nutricionales en una tabla compacta con columnas delgadas para que todo quepa.
         </p>
       </section>
-
-      {message && (
-        <div className="rounded-[1.25rem] border border-[#0f5c4d]/15 bg-white/80 px-5 py-3 text-sm text-slate-700">
-          {message}
-        </div>
-      )}
-
       <section className="panel rounded-[2rem] p-7">
         <form className="flex flex-wrap gap-4">
           <div className="min-w-[220px] flex-1">

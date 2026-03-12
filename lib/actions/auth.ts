@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { buildPublicAppUrl } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { appendToastToPath } from "@/lib/toast";
 
 function getStringValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -14,7 +15,7 @@ export async function signInAction(formData: FormData) {
   const supabase = await createServerSupabaseClient();
 
   if (!supabase) {
-    redirect("/sign-in?message=Configura%20las%20variables%20de%20Supabase.");
+    redirect(appendToastToPath("/sign-in", "Configura las variables de Supabase.", "warning"));
   }
 
   const email = getStringValue(formData, "email");
@@ -29,17 +30,17 @@ export async function signInAction(formData: FormData) {
         ? "Tu email no esta confirmado. Abre el correo de Supabase y confirma la cuenta, o desactiva la confirmacion de email en Supabase Auth si quieres entrar inmediatamente en desarrollo."
         : error.message;
 
-    redirect(`/sign-in?message=${encodeURIComponent(message)}`);
+    redirect(appendToastToPath("/sign-in", message, "error"));
   }
 
-  redirect(next);
+  redirect(appendToastToPath(next, "Sesion iniciada correctamente.", "success"));
 }
 
 export async function signUpAction(formData: FormData) {
   const supabase = await createServerSupabaseClient();
 
   if (!supabase) {
-    redirect("/sign-in?message=Configura%20las%20variables%20de%20Supabase.");
+    redirect(appendToastToPath("/sign-in", "Configura las variables de Supabase.", "warning"));
   }
 
   const fullName = getStringValue(formData, "full_name");
@@ -58,14 +59,14 @@ export async function signUpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/sign-in?message=${encodeURIComponent(error.message)}`);
+    redirect(appendToastToPath("/sign-in", error.message, "error"));
   }
 
   const message = data.session
     ? "Cuenta creada e iniciada correctamente."
     : "Cuenta creada. Revisa tu correo y confirma tu acceso desde el enlace oficial de la app.";
 
-  redirect(`/sign-in?message=${encodeURIComponent(message)}`);
+  redirect(appendToastToPath("/sign-in", message, data.session ? "success" : "warning"));
 }
 
 export async function signOutAction() {
@@ -75,5 +76,5 @@ export async function signOutAction() {
     await supabase.auth.signOut();
   }
 
-  redirect("/");
+  redirect(appendToastToPath("/", "Sesion cerrada correctamente.", "success"));
 }

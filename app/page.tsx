@@ -1,9 +1,37 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export default function Home() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function firstParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
+  const params = searchParams ? await searchParams : undefined;
+  const code = firstParam(params?.code);
+  const tokenHash = firstParam(params?.token_hash);
+  const type = firstParam(params?.type);
+  const next = firstParam(params?.next);
+
+  if (code || tokenHash) {
+    const forwardParams = new URLSearchParams();
+
+    if (code) forwardParams.set("code", code);
+    if (tokenHash) forwardParams.set("token_hash", tokenHash);
+    if (type) forwardParams.set("type", type);
+    if (next && next.startsWith("/")) forwardParams.set("next", next);
+
+    redirect(`/auth/confirm?${forwardParams.toString()}`);
+  }
+
   return <HomeContent />;
 }
 

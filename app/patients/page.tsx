@@ -40,7 +40,6 @@ export default async function PatientsPage({
   searchParams?: SearchParams;
 }) {
   const params = searchParams ? await searchParams : undefined;
-  const message = getMessage(params?.message);
   const editId = getMessage(params?.edit);
   const mode = getMessage(params?.mode);
 
@@ -116,11 +115,6 @@ export default async function PatientsPage({
             Desde aqui ya puedes registrar identificacion, contexto, actividad,
             alergias, intolerancias y notas clinicas iniciales.
           </p>
-          {message ? (
-            <div className="mt-6 rounded-[1.5rem] bg-white/80 p-4 text-sm text-slate-700">
-              {message}
-            </div>
-          ) : null}
         </div>
 
         <div className="panel self-start rounded-[2rem] p-8">

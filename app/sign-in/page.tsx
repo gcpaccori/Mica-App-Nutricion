@@ -60,7 +60,6 @@ export default async function SignInPage({
   searchParams?: SearchParams;
 }) {
   const params = searchParams ? await searchParams : undefined;
-  const message = getMessage(params?.message);
   const next = getMessage(params?.next) ?? "/dashboard";
   const status = await getSupabaseStatus();
   const isConfigured = hasSupabaseEnv();
@@ -75,10 +74,6 @@ export default async function SignInPage({
       }
     }
   }
-
-  const isEmailConfirmationMessage =
-    message?.toLowerCase().includes("confirma") ||
-    message?.toLowerCase().includes("email not confirmed");
 
   const wellnessNotes = [
     "Los planes que se adaptan a la rutina suelen sostenerse mejor con el tiempo.",
@@ -216,18 +211,6 @@ export default async function SignInPage({
             </div>
           </div>
         </section>
-
-      {message ? (
-        <div
-          className={
-            isEmailConfirmationMessage
-              ? "rounded-[1.6rem] border border-[#d97706]/20 bg-[#fff7e8] px-6 py-4 text-sm text-[#9a5a1f]"
-              : "panel rounded-[1.6rem] px-6 py-4 text-sm text-slate-700"
-          }
-        >
-          {message}
-        </div>
-      ) : null}
 
       {isConfigured ? (
         <div className="rounded-[1.6rem] border border-[#e6dccf] bg-white/80 px-6 py-4 text-sm leading-7 text-[#6b5640]">

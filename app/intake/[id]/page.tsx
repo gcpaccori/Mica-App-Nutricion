@@ -187,7 +187,6 @@ const guidedStatusClass = {
 export default async function IntakeDayDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = searchParams ? await searchParams : {};
-  const message = msg(sp.message);
   const modal = msg(sp.modal) ?? "";
   const editMealId = msg(sp.editMeal) ?? null;
   const addItemMealId = msg(sp.addItemMeal) ?? null;
@@ -488,13 +487,6 @@ export default async function IntakeDayDetailPage({ params, searchParams }: Page
           )}
         </div>
       </section>
-
-      {message && (
-        <div className="rounded-[1.5rem] border border-[#0f5c4d]/15 bg-white/80 px-5 py-3 text-sm text-slate-700">
-          {message}
-        </div>
-      )}
-
       <section className="panel rounded-[2rem] p-7 lg:p-8">
         <p className="eyebrow">Ruta operativa de la ingesta</p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">

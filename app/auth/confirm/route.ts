@@ -1,7 +1,9 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { buildPublicAppUrl } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { appendToastToPath } from "@/lib/toast";
 
 function resolveNextPath(rawNext: string | null) {
   if (!rawNext || !rawNext.startsWith("/")) {
@@ -14,8 +16,8 @@ function resolveNextPath(rawNext: string | null) {
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
-  const redirectUrl = new URL(nextPath, requestUrl.origin);
-  const signInUrl = new URL("/sign-in", requestUrl.origin);
+  const redirectUrl = new URL(buildPublicAppUrl(nextPath));
+  const signInUrl = new URL(buildPublicAppUrl("/sign-in"));
   const code = requestUrl.searchParams.get("code");
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type") as EmailOtpType | null;
@@ -23,8 +25,9 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
 
   if (!supabase) {
-    signInUrl.searchParams.set("message", "No fue posible preparar el acceso. Intenta de nuevo.");
-    return NextResponse.redirect(signInUrl);
+    return NextResponse.redirect(
+      new URL(appendToastToPath(signInUrl.toString(), "No fue posible preparar el acceso. Intenta de nuevo.", "error")),
+    );
   }
 
   let errorMessage: string | null = null;
@@ -48,9 +51,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (errorMessage) {
-    signInUrl.searchParams.set("message", errorMessage);
-    return NextResponse.redirect(signInUrl);
+    return NextResponse.redirect(
+      new URL(appendToastToPath(signInUrl.toString(), errorMessage, "error")),
+    );
   }
 
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(
+    new URL(appendToastToPath(redirectUrl.toString(), "Correo confirmado y acceso habilitado.", "success")),
+  );
 }

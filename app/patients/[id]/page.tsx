@@ -175,7 +175,6 @@ function buildPatientTabHref(
 export default async function PatientDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = searchParams ? await searchParams : {};
-  const message = msg(sp.message);
   const modal = msg(sp.modal) ?? "";
   const activeTab = (tabs.includes(msg(sp.tab) as Tab) ? msg(sp.tab) : "overview") as Tab;
   const editMeasurementId = msg(sp.editMeasurement) ?? "";
@@ -402,13 +401,6 @@ export default async function PatientDetailPage({ params, searchParams }: PagePr
           </div>
         </div>
       </section>
-
-      {message && (
-        <div className="rounded-[1.5rem] bg-white/80 border border-[#0f5c4d]/15 px-5 py-3 text-sm text-slate-700">
-          {message}
-        </div>
-      )}
-
       <MobilePatientSidebar currentLabel={activeTabLabel} items={mobileSidebarItems} />
 
       <div className="grid gap-6 xl:grid-cols-[19rem_minmax(0,1fr)] xl:items-start">
