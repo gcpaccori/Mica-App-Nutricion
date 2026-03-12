@@ -3,6 +3,7 @@ import { Inter, Syne } from "next/font/google";
 
 import { AppHeader } from "@/components/app-header";
 import { AppToastViewport } from "@/components/app-toast-viewport";
+import { getPublicAppUrl } from "@/lib/env";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,10 +16,45 @@ const syne = Syne({
   subsets: ["latin"],
 });
 
+const publicAppUrl = getPublicAppUrl();
+const siteTitle = "Mico Nutri Heald";
+const siteDescription = "Pacientes, planes e ingestas en una sola vista clinica.";
+
 export const metadata: Metadata = {
-  title: "Mico Nutri Heald",
-  description:
-    "Sistema de gestion nutricional clinico con Next.js y Supabase.",
+  metadataBase: new URL(publicAppUrl),
+  title: {
+    default: siteTitle,
+    template: `%s | ${siteTitle}`,
+  },
+  description: siteDescription,
+  applicationName: siteTitle,
+  creator: siteTitle,
+  publisher: siteTitle,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: siteTitle,
+    description: siteDescription,
+    siteName: siteTitle,
+    locale: "es_PE",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Vista editorial de Mico Nutri Heald",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: ["/twitter-image"],
+  },
 };
 
 export default async function RootLayout({
