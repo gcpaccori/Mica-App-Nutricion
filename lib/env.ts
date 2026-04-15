@@ -58,7 +58,10 @@ export function hasSupabaseEnv() {
 }
 
 export function isDevAuthBypassEnabled() {
-  return process.env.NODE_ENV !== "production" && process.env.DEV_BYPASS_AUTH === "true";
+  const isProductionLike =
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
+  return !isProductionLike && process.env.DEV_BYPASS_AUTH === "true";
 }
 
 export function getDevAuthBypassCredentials() {
