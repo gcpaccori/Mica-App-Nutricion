@@ -52,6 +52,17 @@ Crea un `.env.local` usando `.env.example`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+DEV_BYPASS_AUTH=false
+DEV_BYPASS_ADMIN_EMAIL=
+DEV_BYPASS_ADMIN_PASSWORD=
+```
+
+Si quieres pausar login/registro en desarrollo y entrar directo en modo admin, activa:
+
+```bash
+DEV_BYPASS_AUTH=true
+DEV_BYPASS_ADMIN_EMAIL=tu_admin@dominio.com
+DEV_BYPASS_ADMIN_PASSWORD=tu_password_admin
 ```
 
 ## Desarrollo
