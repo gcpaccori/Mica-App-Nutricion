@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getSupabaseConfig } from "@/lib/env";
+import { attachAuthBypassVirtualUser } from "@/lib/supabase/auth-bypass";
 
 export function createMiddlewareSupabaseClient(request: NextRequest) {
   const config = getSupabaseConfig();
@@ -30,5 +31,5 @@ export function createMiddlewareSupabaseClient(request: NextRequest) {
     },
   });
 
-  return { response, supabase };
+  return { response, supabase: attachAuthBypassVirtualUser(supabase) };
 }

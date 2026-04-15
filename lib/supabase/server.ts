@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { getSupabaseConfig } from "@/lib/env";
+import { attachAuthBypassVirtualUser } from "@/lib/supabase/auth-bypass";
 
 export async function createServerSupabaseClient() {
   const config = getSupabaseConfig();
@@ -12,7 +13,7 @@ export async function createServerSupabaseClient() {
 
   const cookieStore = await cookies();
 
-  return createServerClient(config.url, config.anonKey, {
+  const supabase = createServerClient(config.url, config.anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -28,4 +29,6 @@ export async function createServerSupabaseClient() {
       },
     },
   });
+
+  return attachAuthBypassVirtualUser(supabase);
 }

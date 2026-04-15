@@ -52,17 +52,32 @@ Crea un `.env.local` usando `.env.example`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+AUTH_REQUIRED=false
 DEV_BYPASS_AUTH=false
 DEV_BYPASS_ADMIN_EMAIL=
 DEV_BYPASS_ADMIN_PASSWORD=
+ALLOW_PRODUCTION_AUTH_BYPASS=false
 ```
 
-Si quieres pausar login/registro en desarrollo y entrar directo en modo admin, activa:
+Por defecto la app inicia en modo sin login (usuario admin local virtual) para uso rápido de un solo operador.
+Si quieres volver a exigir autenticacion real, configura:
+
+```bash
+AUTH_REQUIRED=true
+```
+
+Si quieres pausar login/registro y entrar directo en modo admin, activa:
 
 ```bash
 DEV_BYPASS_AUTH=true
 DEV_BYPASS_ADMIN_EMAIL=tu_admin@dominio.com
 DEV_BYPASS_ADMIN_PASSWORD=tu_password_admin
+```
+
+En entornos de producción, agrega también:
+
+```bash
+ALLOW_PRODUCTION_AUTH_BYPASS=true
 ```
 
 ## Desarrollo
