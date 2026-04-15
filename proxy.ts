@@ -4,6 +4,14 @@ import { NextResponse } from "next/server";
 import { getDevAuthBypassCredentials, isDevAuthBypassEnabled } from "@/lib/env";
 import { createMiddlewareSupabaseClient } from "@/lib/supabase/middleware";
 
+function withSupabaseCookies(target: NextResponse, source: NextResponse) {
+  source.cookies.getAll().forEach(({ name, value, ...rest }) => {
+    target.cookies.set(name, value, rest);
+  });
+
+  return target;
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const { response, supabase } = createMiddlewareSupabaseClient(request);
@@ -43,13 +51,13 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return withSupabaseCookies(NextResponse.redirect(url), response);
   }
 
   if (user && pathname === "/sign-in") {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    return withSupabaseCookies(NextResponse.redirect(url), response);
   }
 
   return response;
