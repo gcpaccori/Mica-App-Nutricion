@@ -26,6 +26,8 @@ export async function proxy(request: NextRequest) {
 
       if (!error) {
         user = data.user;
+      } else {
+        console.warn("[DEV_BYPASS_AUTH] No se pudo iniciar sesión automática:", error.message);
       }
     }
   }
