@@ -58,6 +58,10 @@ export function hasSupabaseEnv() {
 }
 
 export function isAuthBypassEnabled() {
+  if (process.env.AUTH_REQUIRED !== "true") {
+    return true;
+  }
+
   const bypassRequested = process.env.DEV_BYPASS_AUTH === "true";
 
   if (!bypassRequested) {
@@ -72,10 +76,6 @@ export function isAuthBypassEnabled() {
   }
 
   return process.env.ALLOW_PRODUCTION_AUTH_BYPASS === "true";
-}
-
-export function isDevAuthBypassEnabled() {
-  return isAuthBypassEnabled();
 }
 
 export function getDevAuthBypassCredentials() {

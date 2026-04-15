@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { getDevAuthBypassCredentials, isDevAuthBypassEnabled } from "@/lib/env";
+import { getDevAuthBypassCredentials, isAuthBypassEnabled } from "@/lib/env";
 import { createMiddlewareSupabaseClient } from "@/lib/supabase/middleware";
 
 function withSupabaseCookies(target: NextResponse, source: NextResponse) {
@@ -20,7 +20,7 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const bypassEnabled = isDevAuthBypassEnabled();
+  const bypassEnabled = isAuthBypassEnabled();
 
   let {
     data: { user },
