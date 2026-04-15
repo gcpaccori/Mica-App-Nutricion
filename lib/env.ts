@@ -56,3 +56,14 @@ export function buildPublicAppUrl(path = "/") {
 export function hasSupabaseEnv() {
   return Boolean(getSupabaseConfig());
 }
+
+export function isDevAuthBypassEnabled() {
+  return process.env.NODE_ENV !== "production" && process.env.DEV_BYPASS_AUTH === "true";
+}
+
+export function getDevAuthBypassCredentials() {
+  return {
+    email: process.env.DEV_BYPASS_ADMIN_EMAIL?.trim() ?? "",
+    password: process.env.DEV_BYPASS_ADMIN_PASSWORD?.trim() ?? "",
+  };
+}

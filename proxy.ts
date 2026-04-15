@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { getDevAuthBypassCredentials, isDevAuthBypassEnabled } from "@/lib/env";
 import { createMiddlewareSupabaseClient } from "@/lib/supabase/middleware";
 
 export async function proxy(request: NextRequest) {
@@ -11,9 +12,23 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const {
+  const bypassEnabled = isDevAuthBypassEnabled();
+
+  let {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user && bypassEnabled) {
+    const { email, password } = getDevAuthBypassCredentials();
+
+    if (email && password) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (!error) {
+        user = data.user;
+      }
+    }
+  }
 
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
