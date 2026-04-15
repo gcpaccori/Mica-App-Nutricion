@@ -57,8 +57,25 @@ export function hasSupabaseEnv() {
   return Boolean(getSupabaseConfig());
 }
 
+export function isAuthBypassEnabled() {
+  const bypassRequested = process.env.DEV_BYPASS_AUTH === "true";
+
+  if (!bypassRequested) {
+    return false;
+  }
+
+  const isProductionLike =
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
+  if (!isProductionLike) {
+    return true;
+  }
+
+  return process.env.ALLOW_PRODUCTION_AUTH_BYPASS === "true";
+}
+
 export function isDevAuthBypassEnabled() {
-  return process.env.DEV_BYPASS_AUTH === "true";
+  return isAuthBypassEnabled();
 }
 
 export function getDevAuthBypassCredentials() {

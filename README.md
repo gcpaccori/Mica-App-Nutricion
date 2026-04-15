@@ -55,6 +55,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 DEV_BYPASS_AUTH=false
 DEV_BYPASS_ADMIN_EMAIL=
 DEV_BYPASS_ADMIN_PASSWORD=
+ALLOW_PRODUCTION_AUTH_BYPASS=false
 ```
 
 Si quieres pausar login/registro y entrar directo en modo admin, activa:
@@ -63,6 +64,12 @@ Si quieres pausar login/registro y entrar directo en modo admin, activa:
 DEV_BYPASS_AUTH=true
 DEV_BYPASS_ADMIN_EMAIL=tu_admin@dominio.com
 DEV_BYPASS_ADMIN_PASSWORD=tu_password_admin
+```
+
+En entornos de producción, agrega también:
+
+```bash
+ALLOW_PRODUCTION_AUTH_BYPASS=true
 ```
 
 ## Desarrollo
