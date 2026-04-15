@@ -57,7 +57,7 @@ DEV_BYPASS_ADMIN_EMAIL=
 DEV_BYPASS_ADMIN_PASSWORD=
 ```
 
-Si quieres pausar login/registro en desarrollo y entrar directo en modo admin, activa:
+Si quieres pausar login/registro y entrar directo en modo admin, activa:
 
 ```bash
 DEV_BYPASS_AUTH=true
